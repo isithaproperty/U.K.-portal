@@ -168,3 +168,14 @@ body{background:#f7f4ee;color:var(--ink)}
 .safety-category-tabs button span{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#eee6d8;color:#6d6254;font-size:12px}
 .safety-category-tabs button.active{background:#17130f;color:#fff;border-color:#17130f;box-shadow:inset 0 -2px 0 var(--gold)}
 .safety-category-tabs button.active span{background:var(--gold);color:#15120f}
+
+
+/* Building register sub-tabs and onboarding */
+.building-subtabs{display:flex;gap:8px;margin:0 0 18px;border-bottom:1px solid var(--line)}
+.building-subtabs button{border:0;background:transparent;padding:11px 14px;margin-bottom:-1px;border-bottom:3px solid transparent;font-weight:800;color:var(--muted);cursor:pointer}
+.building-subtabs button.active{color:var(--ink);border-bottom-color:var(--gold)}
+.block-onboard-panel{max-width:980px}
+.block-onboard-form{display:grid;gap:16px}
+.block-onboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.block-onboard-actions{display:flex;justify-content:flex-end}
+@media(max-width:720px){.block-onboard-grid{grid-template-columns:1fr}.block-onboard-actions{justify-content:stretch}.block-onboard-actions .primary{width:100%}}
