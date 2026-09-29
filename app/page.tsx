@@ -10,7 +10,7 @@ export default async function Home() {
   if (!user?.email) redirect("/login");
   const email = user.email.toLowerCase();
   const { data: membership } = await supabase.from("portal_members").select("role,portfolio_manager").eq("email", email).maybeSingle();
-  const isManager = membership?.role === "owner" || membership?.role === "manager";
+  const isManager = membership?.role === "owner" || membership?.role === "admin" || membership?.role === "manager";
   const [blockResult, unitResult, residentResult, workOrderResult, contractorResult, contractorDocumentResult, buildingSafetyResult] = await Promise.all([
     supabase.from("blocks").select("id,source_row,name,management_company,type,address,units,manager,financial_year_end,myblockman_export_enabled").order("name"),
     supabase.from("units").select("id,block_id,unit_number").order("unit_number"),
