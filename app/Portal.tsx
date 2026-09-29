@@ -6,6 +6,7 @@ import BlockDashboard from "./BlockDashboard";
 import ContractorRegister from "./ContractorRegister";
 import WorkOrderRegister from "./WorkOrderRegister";
 import BuildingSafetyRegister from "./BuildingSafetyRegister";
+import CommunicationRegister from "./CommunicationRegister";
 import type {Block,Unit,Resident,WorkOrder,Contractor,ContractorDocument,BuildingSafetyRecord} from "./types";
 
 type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages";
@@ -29,7 +30,7 @@ export default function Portal({blocks,units,residents,workOrders,contractors,co
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={residents}/>}
    {view==="finance"&&<EmptyModule title="Service charges & arrears" description="No service charge or arrears data has been added to this portal."/>}
-   {view==="messages"&&<EmptyModule title="Communications" description="No notices or messages have been added to this portal."/>}
+   {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
   </div></section></main>
 }
 function Overview({go,blocks,isManager,viewerName,ownUnitCount,contractors=[],workOrders=[],buildingSafetyRecords=[]}:{go:(view:View)=>void;blocks:Block[];isManager:boolean;viewerName:string;ownUnitCount:number;contractors?:Contractor[];workOrders?:WorkOrder[];buildingSafetyRecords?:BuildingSafetyRecord[]}){
