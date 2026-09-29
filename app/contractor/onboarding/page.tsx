@@ -4,13 +4,16 @@ import ContractorOnboardingClient from "./ContractorOnboardingClient";
 
 export const dynamic="force-dynamic";
 
-export default async function ContractorOnboardingPage(){
+export default async function ContractorOnboardingPage({searchParams}:{searchParams:Promise<{invite?:string}>}){
  const supabase=await createClient();
  const {data:{user}}=await supabase.auth.getUser();
  if(!user?.email)redirect("/contractor/login");
  const email=user.email.toLowerCase();
- const {data:member}=await supabase.from("contractor_members").select("contractor_id,email").eq("email",email).maybeSingle();
- if(!member)return <main className="login-page"><div className="login-card"><p className="eyebrow">AVIAF CONTRACTOR PORTAL</p><h1>Access pending</h1><p>This email has not been invited to a contractor onboarding record. Please contact AVIAF.</p></div></main>;
+ const {invite}=await searchParams;
+ if(!invite)return <main className="login-page"><div className="login-card"><p className="eyebrow">AVIAF CONTRACTOR PORTAL</p><h1>Invitation required</h1><p>Please open the contractor onboarding link sent by AVIAF.</p></div></main>;
+ const {data:member}=await supabase.from("contractor_members").select("contractor_id,email,invite_expires_at").eq("invite_token",invite).eq("email",email).maybeSingle();
+ if(!member)return <main className="login-page"><div className="login-card"><p className="eyebrow">AVIAF CONTRACTOR PORTAL</p><h1>Invitation not valid</h1><p>This invitation does not match your signed-in email address. Please use the email address the invitation was issued to.</p></div></main>;
+ if(new Date(member.invite_expires_at).getTime()<Date.now())return <main className="login-page"><div className="login-card"><p className="eyebrow">AVIAF CONTRACTOR PORTAL</p><h1>Invitation expired</h1><p>Please ask AVIAF to generate a new onboarding link.</p></div></main>;
  const contractorId=member.contractor_id;
  const [contractorResult,tradeResult,onboardingResult,docsResult]=await Promise.all([
   supabase.from("contractors").select("id,company_name,email,phone,status").eq("id",contractorId).single(),
