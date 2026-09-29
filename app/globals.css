@@ -154,3 +154,9 @@ body{background:#f7f4ee;color:var(--ink)}
  .contractor-self-upload{grid-template-columns:1fr}
  .contractor-self-docs>div{align-items:flex-start;flex-direction:column}
 }
+
+
+.onboarding-link-box{display:grid;grid-template-columns:auto minmax(240px,1fr) auto;gap:10px;align-items:center;margin:14px 0;padding:12px 14px;border:1px solid #d8c293;border-radius:10px;background:#fff9ec}
+.onboarding-link-box strong{font-size:13px}
+.onboarding-link-box input{width:100%;min-width:0}
+@media(max-width:760px){.onboarding-link-box{grid-template-columns:1fr}.onboarding-link-box .outline{width:100%}}
