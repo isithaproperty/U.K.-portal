@@ -9,3 +9,6 @@ export type Block = {
   financialYearEnd: string;
   myBlockManExportEnabled: boolean;
 };
+
+export type Unit = { id: number; blockId: number; unitNumber: string };
+export type Resident = { id: number; unitId: number; blockId: number; fullName: string; email: string; phone: string | null };
