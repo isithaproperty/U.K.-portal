@@ -2,14 +2,15 @@
 import {useState} from "react";
 import BlockRegister from "./BlockRegister";
 import UnitRegister from "./UnitRegister";
-import type {Block,Unit,Resident} from "./types";
+import BlockDashboard from "./BlockDashboard";
+import type {Block,Unit,Resident,WorkOrder} from "./types";
 
-type View="overview"|"buildings"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages";
+type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages";
 const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Building safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["messages","Communications","□"]];
 const headings=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
-export default function Portal({blocks,units,residents,isManager,viewerEmail}:{blocks:Block[];units:Unit[];residents:Resident[];isManager:boolean;viewerEmail:string}){
- const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null);
+export default function Portal({blocks,units,residents,workOrders,isManager,viewerEmail}:{blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];isManager:boolean;viewerEmail:string}){
+ const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null),[selectedBlockId,setSelectedBlockId]=useState<number|null>(null);
  const visibleNav=isManager?nav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
  const ownUnits=units.filter(unit=>residents.some(resident=>resident.unitId===unit.id&&resident.email===viewerEmail));
  const viewerName=isManager?viewerEmail.split("@")[0].split(/[._-]/).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(" "):residents.find(resident=>resident.email===viewerEmail)?.fullName??"Resident";
@@ -17,7 +18,8 @@ export default function Portal({blocks,units,residents,isManager,viewerEmail}:{b
   <aside className={`sidebar ${mobile?"open":""}`}><div className="brand"><div><strong>London Property Portal</strong><span>Property management</span></div></div><button className="close-nav" aria-label="Close menu" onClick={()=>setMobile(false)}>×</button><div className="portfolio-switch"><span>PORTFOLIO</span><button>{isManager?"UK Residential":"My property"}</button></div><nav>{visibleNav.map(([key,label,icon])=><button key={key} className={view===key?"active":""} onClick={()=>{setView(key);setMobile(false);setQuery("")}}><i>{icon}</i>{label}</button>)}</nav><div className="side-footer"><div className="user"><span>{viewerName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{viewerName}</b><small>{isManager?"Portfolio manager":"Resident"}</small></div></div><button className="sign-out" onClick={async()=>{const {createClient}=await import("../lib/supabase/browser");await createClient().auth.signOut();window.location.href="/login";}}>Sign out</button></div></aside>
   <section className="workspace"><header><button className="menu" aria-label="Open menu" onClick={()=>setMobile(true)}>☰</button><div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>setView("buildings")} placeholder="Search your blocks and addresses…"/></div></header><div className="content">
    {view==="overview"&&<Overview go={setView} blocks={blocks} isManager={isManager} viewerName={viewerName} ownUnitCount={ownUnits.length}/>}
-   {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} units={units} residents={residents} ownUnits={ownUnits} onManage={isManager?(id)=>{setUnitBlock(id);setView("units");}:undefined}/>}
+   {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} ownUnits={ownUnits} onOpen={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
+   {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} onBack={()=>setView("buildings")}/>}
    {view==="units"&&isManager&&<UnitRegister key={unitBlock??0} blocks={blocks} units={units} residents={residents} initialBlockId={unitBlock}/>}
    {view==="golden"&&<BuildingSafety blocks={blocks}/>}
    {view==="maintenance"&&<EmptyModule title="Work orders" description="No work orders have been added to this portal."/>}
