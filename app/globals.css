@@ -22,3 +22,43 @@
 
 .aviaf-brand{display:flex;align-items:center;gap:10px;padding:10px 8px 14px}.aviaf-brand img{width:74px;height:74px;object-fit:contain;flex:0 0 auto;background:#fff;border-radius:12px;padding:5px;box-shadow:0 2px 10px rgba(0,0,0,.08)}.aviaf-brand>div{min-width:0}.aviaf-brand strong{display:block;font-size:13px;line-height:1.2}.aviaf-brand span{display:block;margin-top:4px;font-size:9px;opacity:.72;letter-spacing:.02em}
 @media(max-width:760px){.aviaf-brand img{width:64px;height:64px}}
+
+/* AVIAF brand refresh */
+:root{--ink:#191714;--nav:#12100e;--nav2:#070706;--muted:#7d7569;--line:#e5ddcf;--gold:#c99a2e;--green:#5f7d67;--red:#a94d46;--blue:#6e665b;--violet:#7d6f57}
+body{background:#f7f4ee;color:var(--ink)}
+.sidebar{background:linear-gradient(180deg,#15120f 0%,#080706 100%);border-right:1px solid #2b2419}
+.aviaf-brand{justify-content:center;padding:4px 4px 18px}
+.aviaf-brand img{width:210px;height:auto;max-height:none;object-fit:contain;background:transparent;border-radius:0;padding:0;box-shadow:none}
+.portfolio-switch{border-block-color:#332b20}
+.portfolio-switch span,.eyebrow{color:#a48e61}
+.sidebar nav button{color:#c8c0b5}
+.sidebar nav button:hover,.sidebar nav button.active{background:#241e16;color:#fff}
+.sidebar nav button.active{box-shadow:inset 3px 0 #d2a23c}
+.sidebar nav i{color:#d8bf81}
+.user{border-top-color:#332b20}.user>span{background:#d2a23c;color:#16120d}.user small{color:#9f9689}
+.workspace>header{background:#fffdfa;border-bottom-color:#e5ddcf}
+.search{color:#9b8f7c}.search input{background:transparent;color:#1d1a16}
+.content{background:transparent}
+.panel,.stat,.feature-panel,.gold-card,.contractor-row,.action,.ticket{background:#fffdfa;border-color:#e5ddcf}
+.panel,.stat{box-shadow:0 3px 12px rgba(78,59,24,.05)}
+.primary{background:#c99a2e;color:#17120b}
+.primary:hover{background:#b98922}
+.outline,.section-tools button,.doc-actions button,.wo-row-actions button{background:#fffdfa;border-color:#d9cfbd;color:#3d352b}
+.page-head h1,.panel-head h2,.section-tools h2,.feature-panel h2,.block-summary-card h2,.block-action-card h2,.block-wo-form h2,.contractor-add h2,.contractor-detail h2{color:#171411}
+.stat.amber>i,.stat.blue>i,.stat.green>i{background:#f5ead0;color:#9a6f16}
+.block-dashboard-hero,.safety-banner{background:linear-gradient(110deg,#17130f,#2a2116)}
+.block-dashboard-hero p,.block-dashboard-hero small{color:#d9cdb9}
+.tabs button.active,.block-tabs button.active{color:#18140f;border-bottom-color:#c99a2e}
+.wo-register-tabs button.active{background:#19150f;color:#fff;border-color:#19150f}
+.wo-pay-btn{background:#c99a2e;color:#17120b}
+.dashboard-bar-track,.manager-metric>div{background:#eee7db}
+.dashboard-bar-track i,.manager-metric i{background:linear-gradient(90deg,#b88420,#d3a944)}
+.manager-overview-card{background:#fffaf2;border-color:#e4d7c3}
+.manager-overview-head>strong{background:#f3e8d3;color:#6c5423}
+.manager-overview-card dl div{background:#fffdfa;border-color:#eadfce}
+.building-image{background:#3a3025}
+.resident-avatar-live{background:#f2e5cc;color:#6d5321}
+.contractor-status.approved,.doc-status.valid{background:#e6eee8;color:#4e6a58}
+.contractor-status.pending,.doc-status.expiring,.wo-card-controls em{background:#f7ead0;color:#8a6415}
+.locked-field,.next-review,.table-header,.resident-live-head{background:#f8f4ec}
+@media(max-width:760px){.aviaf-brand img{width:190px}}
