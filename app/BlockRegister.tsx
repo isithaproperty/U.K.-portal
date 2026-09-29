@@ -30,9 +30,9 @@ export default function BlockRegister({ globalQuery = "", blocks, ownUnits = [],
         <label>Manager<select value={manager} onChange={(event) => setManager(event.target.value)}><option value="">All managers</option>{managers.map((name) => <option key={name}>{name}</option>)}</select></label>
         <label>Type<select value={type} onChange={(event) => setType(event.target.value)}><option value="">All types</option>{types.map((name) => <option key={name}>{name}</option>)}</select></label>
       </div>
-      <div className="block-table-wrap"><table className="block-table"><thead><tr><th>Block</th><th>Management company</th><th>Type</th><th>Units</th><th>Manager</th><th>Year end</th><th>Export</th></tr></thead><tbody>
+      <div className="block-table-wrap"><table className="block-table"><thead><tr><th>Block</th><th>Management company</th><th>Type</th><th>Units</th><th>Manager</th><th>Year end</th></tr></thead><tbody>
         {filtered.map((block) => <tr key={block.id} onClick={() => onOpen?.(block.id)} onKeyDown={(event) => { if (event.key === "Enter") onOpen?.(block.id); }} tabIndex={0} aria-label={`View ${block.name}`}>
-          <td><strong>{block.name}</strong><small>{block.address.replace(/\n/g, ", ")}</small></td><td>{block.managementCompany}</td><td>{block.type}</td><td className="numeric">{block.units}</td><td>{block.manager}</td><td>{dateFormat.format(new Date(`${block.financialYearEnd}T00:00:00Z`))}</td><td>{block.myBlockManExportEnabled ? "Yes" : "No"}</td>
+          <td><strong>{block.name}</strong><small>{block.address.replace(/\n/g, ", ")}</small></td><td>{block.managementCompany}</td><td>{block.type}</td><td className="numeric">{block.units}</td><td>{block.manager}</td><td>{dateFormat.format(new Date(`${block.financialYearEnd}T00:00:00Z`))}</td>
         </tr>)}
       </tbody></table></div>
       {filtered.length === 0 && <p className="block-empty">No blocks match those filters.</p>}
