@@ -5,13 +5,14 @@ import UnitRegister from "./UnitRegister";
 import BlockDashboard from "./BlockDashboard";
 import ContractorRegister from "./ContractorRegister";
 import WorkOrderRegister from "./WorkOrderRegister";
-import type {Block,Unit,Resident,WorkOrder,Contractor,ContractorDocument} from "./types";
+import BuildingSafetyRegister from "./BuildingSafetyRegister";
+import type {Block,Unit,Resident,WorkOrder,Contractor,ContractorDocument,BuildingSafetyRecord} from "./types";
 
 type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages";
 const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Building safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["messages","Communications","□"]];
 const headings=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
-export default function Portal({blocks,units,residents,workOrders,contractors,contractorDocuments,isManager,memberRole,portfolioManager,viewerEmail}:{blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
+export default function Portal({blocks,units,residents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail}:{blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
  const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null),[selectedBlockId,setSelectedBlockId]=useState<number|null>(null);
  const visibleNav=isManager?nav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
  const ownUnits=units.filter(unit=>residents.some(resident=>resident.unitId===unit.id&&resident.email===viewerEmail));
@@ -23,7 +24,7 @@ export default function Portal({blocks,units,residents,workOrders,contractors,co
    {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} ownUnits={ownUnits} onOpen={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
    {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
    {view==="units"&&isManager&&<UnitRegister key={unitBlock??0} blocks={blocks} units={units} residents={residents} initialBlockId={unitBlock}/>}
-   {view==="golden"&&<BuildingSafety blocks={blocks}/>}
+   {view==="golden"&&isManager&&<BuildingSafetyRegister blocks={blocks} records={buildingSafetyRecords}/>}
    {view==="maintenance"&&isManager&&<WorkOrderRegister blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={residents}/>}
