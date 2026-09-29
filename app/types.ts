@@ -13,4 +13,4 @@ export type Block = {
 export type Unit = { id: number; blockId: number; unitNumber: string };
 export type Resident = { id: number; unitId: number; blockId: number; fullName: string; email: string; phone: string | null };
 
-export type WorkOrder = { id:number; blockId:number; title:string; description:string; priority:string; status:string; addressSnapshot:string; createdBy:string; createdAt:string };
+export type WorkOrder = { id:number; blockId:number; unitId:number|null; residentId:number|null; title:string; description:string; category:string; priority:string; status:string; contractor:string|null; estimatedCost:number|null; actualCost:number|null; notes:string; addressSnapshot:string; createdBy:string; createdAt:string; updatedAt:string };
