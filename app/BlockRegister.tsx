@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type {Block} from "./types";
+import type {Block,Unit} from "./types";
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
 
-export default function BlockRegister({ globalQuery = "", blocks }: { globalQuery?: string; blocks: Block[] }) {
+export default function BlockRegister({ globalQuery = "", blocks, ownUnits = [], onManage }: { globalQuery?: string; blocks: Block[]; ownUnits?: Unit[]; onManage?: (id:number)=>void }) {
   const managers = [...new Set(blocks.map((block) => block.manager))].sort();
   const types = [...new Set(blocks.map((block) => block.type))].sort();
   const blockCount = blocks.length;
@@ -39,6 +39,6 @@ export default function BlockRegister({ globalQuery = "", blocks }: { globalQuer
       </tbody></table></div>
       {filtered.length === 0 && <p className="block-empty">No blocks match those filters.</p>}
     </div>
-    {selected && <div className="block-modal-backdrop" onClick={() => setSelectedId(null)}><section className="block-detail" role="dialog" aria-modal="true" aria-label={selected.name} onClick={(event) => event.stopPropagation()}><button className="block-close" aria-label="Close block details" onClick={() => setSelectedId(null)}>×</button><p className="eyebrow">BLOCK DETAILS</p><h2>{selected.name}</h2><dl><div><dt>Address</dt><dd className="block-address">{selected.address}</dd></div><div><dt>Management company</dt><dd>{selected.managementCompany}</dd></div><div><dt>Type</dt><dd>{selected.type}</dd></div><div><dt>Number of units</dt><dd>{selected.units}</dd></div><div><dt>Manager</dt><dd>{selected.manager}</dd></div><div><dt>Financial year end</dt><dd>{dateFormat.format(new Date(`${selected.financialYearEnd}T00:00:00Z`))}</dd></div><div><dt>MyBlockMan export enabled</dt><dd>{selected.myBlockManExportEnabled ? "Yes" : "No"}</dd></div></dl></section></div>}
+    {selected && <div className="block-modal-backdrop" onClick={() => setSelectedId(null)}><section className="block-detail" role="dialog" aria-modal="true" aria-label={selected.name} onClick={(event) => event.stopPropagation()}><button className="block-close" aria-label="Close block details" onClick={() => setSelectedId(null)}>×</button><p className="eyebrow">BLOCK DETAILS</p><h2>{selected.name}</h2><dl><div><dt>Address</dt><dd className="block-address">{selected.address}</dd></div><div><dt>Management company</dt><dd>{selected.managementCompany}</dd></div><div><dt>Type</dt><dd>{selected.type}</dd></div><div><dt>Number of units</dt><dd>{selected.units}</dd></div><div><dt>Manager</dt><dd>{selected.manager}</dd></div><div><dt>Financial year end</dt><dd>{dateFormat.format(new Date(`${selected.financialYearEnd}T00:00:00Z`))}</dd></div><div><dt>MyBlockMan export enabled</dt><dd>{selected.myBlockManExportEnabled ? "Yes" : "No"}</dd></div>{ownUnits.filter(unit=>unit.blockId===selected.id).length>0&&<div><dt>My unit</dt><dd>{ownUnits.filter(unit=>unit.blockId===selected.id).map(unit=>unit.unitNumber).join(", ")}</dd></div>}</dl>{onManage&&<button className="primary" onClick={()=>{onManage(selected.id);setSelectedId(null);}}>Manage units & residents</button>}</section></div>}
   </section>;
 }
