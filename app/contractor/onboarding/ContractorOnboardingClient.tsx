@@ -45,10 +45,14 @@ export default function ContractorOnboardingClient({contractor,initialTrades,onb
   if(chosenTrades.includes(t)){const next=chosenTrades.filter(x=>x!==t);setChosenTrades(next);await supabase.from("contractor_trades").delete().eq("contractor_id",contractor.id).eq("trade",t);}
   else{setChosenTrades([...chosenTrades,t]);await supabase.from("contractor_trades").upsert({contractor_id:contractor.id,trade:t},{onConflict:"contractor_id,trade"});}
  }
+ async function notify(eventType:string,extra:Record<string,unknown>={}){
+  const supabase=createClient();
+  await supabase.functions.invoke("contractor-email",{body:{contractorId:contractor.id,eventType,...extra}});
+ }
  async function save(){
   if(locked)return;setBusy(true);setMessage("");
   const {error}=await createClient().from("contractor_onboarding").upsert({contractor_id:contractor.id,employee_count:employeeCount===""?null:Number(employeeCount),transports_waste:transportsWaste,undertakes_design:undertakesDesign,undertakes_asbestos:undertakesAsbestos,uses_subcontractors:usesSubcontractors,onboarding_status:ready?"Ready for review":"Incomplete",declaration_name:declarationName.trim()||null,declaration_accepted_at:declarationAccepted?new Date().toISOString():null,updated_at:new Date().toISOString()},{onConflict:"contractor_id"});
-  if(error)setMessage("Could not save onboarding. Please try again.");else{setStatus(ready?"Ready for review":"Incomplete");setMessage(ready?"Your onboarding pack has been submitted for review.":"Saved. Outstanding items are shown below.");}
+  if(error)setMessage("Could not save onboarding. Please try again.");else{const wasReady=status==="Ready for review";setStatus(ready?"Ready for review":"Incomplete");setMessage(ready?"Your onboarding pack has been submitted for review.":"Saved. Outstanding items are shown below.");if(ready&&!wasReady)await notify("onboarding_submitted");}
   setBusy(false);
  }
  async function upload(e:React.FormEvent){
@@ -58,7 +62,7 @@ export default function ContractorOnboardingClient({contractor,initialTrades,onb
   if(up){setMessage("Upload failed.");setBusy(false);return;}
   const {data,error}=await supabase.from("contractor_documents").insert({contractor_id:contractor.id,document_type:docType,file_name:file.name,storage_path:path,mime_type:file.type||null,file_size:file.size,expiry_date:expiry||null,notes:notes.trim(),uploaded_by:viewerEmail}).select("id,document_type,file_name,storage_path,expiry_date,notes,uploaded_at,uploaded_by").single();
   if(error){await supabase.storage.from("contractor-documents").remove([path]);setMessage("Document record could not be saved.");}
-  else{setDocs(current=>[data,...current]);setFile(null);setExpiry("");setNotes("");setMessage("Evidence uploaded.");}
+  else{setDocs(current=>[data,...current]);setFile(null);setExpiry("");setNotes("");setMessage("Evidence uploaded.");await notify("document_uploaded",{documentType:docType});}
   setBusy(false);
  }
  async function remove(doc:Doc){
