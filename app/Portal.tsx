@@ -90,7 +90,29 @@ function Overview({go,blocks,isManager,viewerName,ownUnitCount,contractors=[],wo
    ]}/>
  </div>}
  {isManager&&managerRows.length>0&&<section className="panel manager-overview-panel"><div className="panel-head"><div><p className="eyebrow">PORTFOLIO MANAGERS</p><h2>Performance overview</h2></div></div><div className="manager-overview-grid">{managerRows.map(row=><article key={row.name} className="manager-overview-card"><div className="manager-overview-head"><div><span>Portfolio manager</span><h3>{row.name}</h3></div><strong>{row.blocks} blocks</strong></div><div className="manager-metric"><span>Compliance</span><b>{row.compliance}%</b><div><i style={{width:`${row.compliance}%`}}/></div></div><dl><div><dt>Outstanding safety</dt><dd>{row.outstandingSafety}</dd></div><div><dt>Open WOs</dt><dd>{row.openWOs}</dd></div><div><dt>Awaiting payment</dt><dd>{row.awaitingPayment}</dd></div></dl></article>)}</div></section>}
- <div className="clean-overview-grid"><section className="panel"><div className="panel-head"><div><p className="eyebrow">YOUR PORTFOLIO</p><h2>Blocks at a glance</h2></div><button onClick={()=>go("buildings")}>View blocks</button></div><div className="clean-block-preview">{blocks.slice(0,5).map(b=><button key={b.id} onClick={()=>go("buildings")}><b>{b.name}</b><span>{b.address.replace(/\n/g,", ")}</span><strong>{b.units} units</strong></button>)}</div></section><section className="panel clean-next"><p className="eyebrow">NEXT STEPS</p><h2>Your workspace is ready</h2><p>{isManager?"Use the charts above to monitor safety, work orders and payments across your portfolio.":"Open your block to see the property details assigned to you."}</p><button className="primary" onClick={()=>go("buildings")}>Open blocks</button></section></div></>
+ {isManager?<div className="overview-pie-grid">
+  <PieSummary title="Compliance" subtitle="Building safety position" segments={[
+    {label:"Current",value:safetyCounts.Current,tone:"green"},
+    {label:"Outstanding",value:safetyCounts["Action required"]+safetyCounts["Under review"]+safetyCounts.Expired,tone:"amber"}
+  ]} emptyLabel="No compliance records yet" onClick={()=>go("golden")}/>
+  <PieSummary title="Levy arrears" subtitle="Service charge collection" segments={[]} emptyLabel="No levy data yet" onClick={()=>go("finance")}/>
+  <PieSummary title="Contractor payments" subtitle="Completed work orders" segments={[
+    {label:"Awaiting approval",value:paymentCounts.Awaiting,tone:"amber"},
+    {label:"Approved",value:paymentCounts.Approved,tone:"blue"},
+    {label:"Paid",value:paymentCounts.Paid,tone:"green"}
+  ]} emptyLabel="No contractor payment data yet" onClick={()=>go("maintenance")}/>
+ </div>:<div className="clean-overview-grid"><section className="panel"><div className="panel-head"><div><p className="eyebrow">YOUR PORTFOLIO</p><h2>Blocks at a glance</h2></div><button onClick={()=>go("buildings")}>View blocks</button></div><div className="clean-block-preview">{blocks.slice(0,5).map(b=><button key={b.id} onClick={()=>go("buildings")}><b>{b.name}</b><span>{b.address.replace(/\n/g,", ")}</span><strong>{b.units} units</strong></button>)}</div></section></div>}</>
+}
+function PieSummary({title,subtitle,segments,emptyLabel,onClick}:{title:string;subtitle:string;segments:{label:string;value:number;tone:"green"|"amber"|"blue"|"red"}[];emptyLabel:string;onClick?:()=>void}){
+ const total=segments.reduce((sum,s)=>sum+s.value,0);
+ let offset=0;
+ const toneColor:{[key:string]:string}={green:"#5f7d67",amber:"#c99a2e",blue:"#6e665b",red:"#a94d46"};
+ const gradient=total?segments.filter(s=>s.value>0).map(s=>{const start=(offset/total)*100;offset+=s.value;const end=(offset/total)*100;return `${toneColor[s.tone]} ${start}% ${end}%`;}).join(", "):"#ece6da 0 100%";
+ return <section className={`panel overview-pie-card ${onClick?"clickable":""}`} onClick={onClick} role={onClick?"button":undefined} tabIndex={onClick?0:undefined} onKeyDown={e=>{if(onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();onClick();}}}>
+  <div className="panel-head"><div><p className="eyebrow">{title.toUpperCase()}</p><h2>{subtitle}</h2></div></div>
+  <div className="pie-summary-body"><div className="pie-ring" style={{background:`conic-gradient(${gradient})`}}><div><strong>{total}</strong><span>{total?"records":"No data"}</span></div></div>
+  <div className="pie-legend">{total?segments.map(s=><div key={s.label}><i className={`pie-dot ${s.tone}`}/><span>{s.label}</span><strong>{s.value}</strong></div>):<p>{emptyLabel}</p>}</div></div>
+ </section>
 }
 function DashboardChart({title,subtitle,rows}:{title:string;subtitle:string;rows:{label:string;value:number}[]}){
  const max=Math.max(1,...rows.map(r=>r.value));
