@@ -88,3 +88,40 @@ body{background:#f7f4ee;color:var(--ink)}
   .aviaf-brand{min-height:190px;margin:-8px 0 14px}
   .aviaf-brand img{width:215px}
 }
+
+
+/* Contractor onboarding */
+.contractor-onboarding{margin-top:18px}
+.contractor-onboarding .panel-head{align-items:flex-start;gap:18px}
+.trade-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:16px 0 18px}
+.trade-check{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fffdfa;cursor:pointer;font-weight:700}
+.trade-check.selected{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(201,154,46,.25);background:#fff8e8}
+.trade-check input,.tick-field input{accent-color:var(--gold)}
+.onboarding-questions{margin:8px 0 20px}
+.tick-field{display:flex!important;align-items:center;gap:9px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fffdfa;font-weight:600}
+.tick-field input{width:auto!important;margin:0}
+.onboarding-checklist{border-top:1px solid var(--line);padding-top:16px;margin-top:4px}
+.onboarding-checklist h3,.onboarding-upload h3{margin:0 0 12px}
+.onboarding-item{display:flex;justify-content:space-between;gap:16px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;background:#fffdfa}
+.onboarding-item div{display:flex;flex-direction:column;gap:4px}
+.onboarding-item small{color:var(--muted);line-height:1.35}
+.onboarding-item>span{font-size:12px;font-weight:800;white-space:nowrap}
+.onboarding-item.complete{border-color:#b8d5bf;background:#f2f8f3}
+.onboarding-item.complete strong,.onboarding-item.complete>span{color:#3c6b49}
+.onboarding-item.missing{border-color:#e3c0bc;background:#fff5f3}
+.onboarding-item.missing strong,.onboarding-item.missing>span{color:#8d443f}
+.onboarding-item.optional{opacity:.72}
+.onboarding-upload{margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+.onboarding-upload form{display:grid;grid-template-columns:1.3fr 1fr 1.3fr 1.3fr auto;gap:10px;align-items:end}
+.onboarding-declaration{margin-top:20px;padding:16px;border:1px solid #d8c293;border-radius:12px;background:#fff9ec}
+.onboarding-declaration>label:first-child{display:block;margin-bottom:12px}
+.onboarding-actions{display:flex;gap:10px;margin-top:14px}
+.onboarding-progress{margin:10px 0 0;color:var(--muted);font-size:13px;font-weight:700}
+@media(max-width:980px){
+ .onboarding-upload form{grid-template-columns:1fr 1fr}
+}
+@media(max-width:640px){
+ .trade-check-grid,.onboarding-upload form{grid-template-columns:1fr}
+ .onboarding-item{flex-direction:column}
+ .onboarding-actions{flex-direction:column}
+}
