@@ -179,3 +179,9 @@ body{background:#f7f4ee;color:var(--ink)}
 .block-onboard-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 .block-onboard-actions{display:flex;justify-content:flex-end}
 @media(max-width:720px){.block-onboard-grid{grid-template-columns:1fr}.block-onboard-actions{justify-content:stretch}.block-onboard-actions .primary{width:100%}}
+
+
+/* Clickable portfolio overview summary cards */
+.stat.clickable{cursor:pointer;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.stat.clickable:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(25,23,20,.10);border-color:#cfb36c}
+.stat.clickable:focus-visible{outline:3px solid rgba(201,154,46,.35);outline-offset:2px}
