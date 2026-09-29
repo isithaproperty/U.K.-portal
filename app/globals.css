@@ -125,3 +125,32 @@ body{background:#f7f4ee;color:var(--ink)}
  .onboarding-item{flex-direction:column}
  .onboarding-actions{flex-direction:column}
 }
+
+
+/* Contractor self-service portal */
+.contractor-self-page{min-height:100vh;background:#f7f4ee;padding:28px}
+.contractor-self-shell{max-width:1180px;margin:0 auto;display:grid;gap:18px}
+.contractor-self-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding:24px 26px;border-radius:16px;background:linear-gradient(135deg,#15120f,#292117);color:#fff;box-shadow:0 12px 30px rgba(0,0,0,.12)}
+.contractor-self-head h1{margin:4px 0 6px;font-size:32px}
+.contractor-self-head p{margin:0;color:#d9d0c1}
+.contractor-self-head>div:last-child{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.contractor-self-head .outline{border-color:#8f7240;color:#fff;background:transparent}
+.contractor-self-page .panel{background:#fffdfa;border:1px solid #e4dccf;border-radius:14px;padding:22px;box-shadow:0 6px 18px rgba(32,25,15,.05)}
+.contractor-self-page .panel h2{margin-top:0}
+.contractor-self-upload{display:grid;grid-template-columns:1.25fr 1fr 1.2fr 1fr auto;gap:10px;align-items:end;margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.contractor-self-docs{display:grid;gap:8px;margin-top:16px}
+.contractor-self-docs>div{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.contractor-self-docs>div>div{display:flex;flex-direction:column;gap:3px}
+.contractor-self-docs span{font-size:12px;color:var(--muted)}
+.declaration-check{margin:12px 0 14px}
+.onboarding-lock{display:flex;gap:12px;align-items:center;padding:14px 16px;border:1px solid #b8d5bf;background:#f2f8f3;border-radius:12px}
+.onboarding-lock strong{color:#3c6b49}
+@media(max-width:900px){
+ .contractor-self-upload{grid-template-columns:1fr 1fr}
+ .contractor-self-head{flex-direction:column}
+}
+@media(max-width:600px){
+ .contractor-self-page{padding:14px}
+ .contractor-self-upload{grid-template-columns:1fr}
+ .contractor-self-docs>div{align-items:flex-start;flex-direction:column}
+}
