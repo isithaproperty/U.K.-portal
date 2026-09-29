@@ -32,10 +32,70 @@ export default function Portal({blocks,units,residents,workOrders,contractors,co
    {view==="messages"&&<EmptyModule title="Communications" description="No notices or messages have been added to this portal."/>}
   </div></section></main>
 }
-function Overview({go,blocks,isManager,viewerName,ownUnitCount,contractors=[],workOrderCount=0}:{go:(view:View)=>void;blocks:Block[];isManager:boolean;viewerName:string;ownUnitCount:number;contractors?:Contractor[];workOrderCount?:number}){
+function Overview({go,blocks,isManager,viewerName,ownUnitCount,contractors=[],workOrders=[],buildingSafetyRecords=[]}:{go:(view:View)=>void;blocks:Block[];isManager:boolean;viewerName:string;ownUnitCount:number;contractors?:Contractor[];workOrders?:WorkOrder[];buildingSafetyRecords?:BuildingSafetyRecord[]}){
+ const openWOs=workOrders.filter(wo=>wo.status!=="Complete").length;
+ const safetyCounts={
+  Current:buildingSafetyRecords.filter(r=>r.status==="Current").length,
+  "Action required":buildingSafetyRecords.filter(r=>r.status==="Action required").length,
+  "Under review":buildingSafetyRecords.filter(r=>r.status==="Under review").length,
+  Expired:buildingSafetyRecords.filter(r=>r.status==="Expired").length
+ };
+ const paymentCounts={
+  Awaiting:workOrders.filter(wo=>wo.status==="Complete"&&wo.paymentStatus==="Not approved").length,
+  Approved:workOrders.filter(wo=>wo.paymentStatus==="Approved").length,
+  Paid:workOrders.filter(wo=>wo.paymentStatus==="Paid").length
+ };
+ const woCounts={
+  Open:workOrders.filter(wo=>wo.status==="Open").length,
+  "In progress":workOrders.filter(wo=>wo.status==="In progress").length,
+  "On hold":workOrders.filter(wo=>wo.status==="On hold").length,
+  Complete:workOrders.filter(wo=>wo.status==="Complete").length
+ };
+ const managerNames=[...new Set(blocks.map(b=>b.manager))];
+ const managerRows=managerNames.map(name=>{
+  const ids=new Set(blocks.filter(b=>b.manager===name).map(b=>b.id));
+  const safety=buildingSafetyRecords.filter(r=>ids.has(r.blockId));
+  const current=safety.filter(r=>r.status==="Current").length;
+  const total=safety.length;
+  const compliance=total?Math.round((current/total)*100):0;
+  const payments=workOrders.filter(wo=>ids.has(wo.blockId));
+  return {
+   name,
+   blocks:[...ids].length,
+   compliance,
+   outstandingSafety:safety.filter(r=>r.status!=="Current").length,
+   openWOs:payments.filter(wo=>wo.status!=="Complete").length,
+   awaitingPayment:payments.filter(wo=>wo.status==="Complete"&&wo.paymentStatus==="Not approved").length
+  };
+ });
  return <><div className="page-head"><div><p className="eyebrow">PORTFOLIO OVERVIEW</p><h1>{isManager?`Good morning, ${viewerName.split(" ")[0]}`:"Your property portfolio"}</h1><p>{blocks.length} {blocks.length===1?"block":"blocks"} available to your account</p></div></div>
- <section className="stat-grid"><Stat label="Blocks" value={blocks.length} note="Accessible to you" tone="blue"/><Stat label={isManager?"Units":"My units"} value={isManager?blocks.reduce((total,b)=>total+b.units,0):ownUnitCount} note={isManager?"Across the block list":"Assigned to your email"} tone="green"/>{isManager&&<><Stat label="Work orders" value={workOrderCount} note="Open portfolio jobs" tone="amber"/><Stat label="Contractors" value={contractors.length} note="Live supplier records" tone="blue"/></>}</section>
- <div className="clean-overview-grid"><section className="panel"><div className="panel-head"><div><p className="eyebrow">YOUR PORTFOLIO</p><h2>Blocks at a glance</h2></div><button onClick={()=>go("buildings")}>View blocks</button></div><div className="clean-block-preview">{blocks.slice(0,5).map(b=><button key={b.id} onClick={()=>go("buildings")}><b>{b.name}</b><span>{b.address.replace(/\n/g,", ")}</span><strong>{b.units} units</strong></button>)}</div></section><section className="panel clean-next"><p className="eyebrow">NEXT STEPS</p><h2>Your workspace is ready</h2><p>{isManager?"Open a block to add units and residents.":"Open your block to see the property details assigned to you."}</p><button className="primary" onClick={()=>go("buildings")}>Open blocks</button></section></div></>
+ <section className="stat-grid"><Stat label="Blocks" value={blocks.length} note="Accessible to you" tone="blue"/><Stat label={isManager?"Units":"My units"} value={isManager?blocks.reduce((total,b)=>total+b.units,0):ownUnitCount} note={isManager?"Across the block list":"Assigned to your email"} tone="green"/>{isManager&&<><Stat label="Open work orders" value={openWOs} note="Live portfolio jobs" tone="amber"/><Stat label="Safety actions" value={safetyCounts["Action required"]+safetyCounts.Expired+safetyCounts["Under review"]} note="Outstanding compliance items" tone="blue"/></>}</section>
+ {isManager&&<div className="overview-chart-grid">
+   <DashboardChart title="Building safety" subtitle="Current compliance position" rows={[
+    {label:"Current",value:safetyCounts.Current},
+    {label:"Action required",value:safetyCounts["Action required"]},
+    {label:"Under review",value:safetyCounts["Under review"]},
+    {label:"Expired",value:safetyCounts.Expired}
+   ]}/>
+   <DashboardChart title="Work orders" subtitle="Operational workload" rows={[
+    {label:"Open",value:woCounts.Open},
+    {label:"In progress",value:woCounts["In progress"]},
+    {label:"On hold",value:woCounts["On hold"]},
+    {label:"Complete",value:woCounts.Complete}
+   ]}/>
+   <DashboardChart title="Payments" subtitle="Completed WO payment position" rows={[
+    {label:"Awaiting approval",value:paymentCounts.Awaiting},
+    {label:"Approved",value:paymentCounts.Approved},
+    {label:"Paid",value:paymentCounts.Paid}
+   ]}/>
+ </div>}
+ {isManager&&managerRows.length>0&&<section className="panel manager-overview-panel"><div className="panel-head"><div><p className="eyebrow">PORTFOLIO MANAGERS</p><h2>Performance overview</h2></div></div><div className="manager-overview-grid">{managerRows.map(row=><article key={row.name} className="manager-overview-card"><div className="manager-overview-head"><div><span>Portfolio manager</span><h3>{row.name}</h3></div><strong>{row.blocks} blocks</strong></div><div className="manager-metric"><span>Compliance</span><b>{row.compliance}%</b><div><i style={{width:`${row.compliance}%`}}/></div></div><dl><div><dt>Outstanding safety</dt><dd>{row.outstandingSafety}</dd></div><div><dt>Open WOs</dt><dd>{row.openWOs}</dd></div><div><dt>Awaiting payment</dt><dd>{row.awaitingPayment}</dd></div></dl></article>)}</div></section>}
+ <div className="clean-overview-grid"><section className="panel"><div className="panel-head"><div><p className="eyebrow">YOUR PORTFOLIO</p><h2>Blocks at a glance</h2></div><button onClick={()=>go("buildings")}>View blocks</button></div><div className="clean-block-preview">{blocks.slice(0,5).map(b=><button key={b.id} onClick={()=>go("buildings")}><b>{b.name}</b><span>{b.address.replace(/\n/g,", ")}</span><strong>{b.units} units</strong></button>)}</div></section><section className="panel clean-next"><p className="eyebrow">NEXT STEPS</p><h2>Your workspace is ready</h2><p>{isManager?"Use the charts above to monitor safety, work orders and payments across your portfolio.":"Open your block to see the property details assigned to you."}</p><button className="primary" onClick={()=>go("buildings")}>Open blocks</button></section></div></>
+}
+function DashboardChart({title,subtitle,rows}:{title:string;subtitle:string;rows:{label:string;value:number}[]}){
+ const max=Math.max(1,...rows.map(r=>r.value));
+ const total=rows.reduce((sum,r)=>sum+r.value,0);
+ return <section className="panel dashboard-chart"><div className="panel-head"><div><p className="eyebrow">{title.toUpperCase()}</p><h2>{subtitle}</h2></div><strong>{total}</strong></div><div className="dashboard-bars">{rows.map(row=><div key={row.label} className="dashboard-bar-row"><div><span>{row.label}</span><b>{row.value}</b></div><div className="dashboard-bar-track"><i style={{width:`${Math.max(row.value?8:0,(row.value/max)*100)}%`}}/></div></div>)}</div></section>
 }
 function Stat({label,value,note,tone}:{label:string;value:number|string;note:string;tone:string}){return <article className={`stat ${tone}`}><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div><i>▦</i></article>}
 function BuildingSafety({blocks}:{blocks:Block[]}){const[building,setBuilding]=useState(blocks[0]?.name ?? ""),selected=blocks.find(x=>x.name===building);return <><div className="page-head"><div><p className="eyebrow">BUILDING SAFETY</p><h1>Golden Thread</h1><p>Choose a block to view its safety record.</p></div></div>{selected && <div className="building-context"><label>Building<select value={building} onChange={e=>setBuilding(e.target.value)}>{blocks.map(x=><option key={x.id}>{x.name}</option>)}</select></label><div><span>{selected?.units ?? 0} units</span><small>{selected?.address.replace(/\n/g,", ")}</small></div></div>}<div className="clean-notice">No safety records have been added for {selected?.name ?? "this portfolio"}. Compliance scores and statuses will appear only when supported by actual records.</div><div className="safety-empty-grid">{headings.map(x=><article className="panel" key={x}><span>▰</span><h2>{x}</h2><p>No records added</p></article>)}</div></>}
