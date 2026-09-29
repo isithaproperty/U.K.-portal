@@ -10,10 +10,10 @@ const safetyAreas=["Building registration","Safety case","Fire safety","Structur
 export default function BlockDashboard({block,units,residents,workOrders,contractors,onBack}:{block:Block;units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];onBack:()=>void}){
  const router=useRouter();
  const[tab,setTab]=useState<Tab>("overview");
- const[title,setTitle]=useState(""),[description,setDescription]=useState(""),[category,setCategory]=useState("General"),[priority,setPriority]=useState("Normal"),[unitId,setUnitId]=useState<number|null>(null),[residentId,setResidentId]=useState<number|null>(null),[contractorId,setContractorId]=useState<number|null>(null),[estimatedCost,setEstimatedCost]=useState(""),[notes,setNotes]=useState(""),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
+ const[title,setTitle]=useState(""),[description,setDescription]=useState(""),[category,setCategory]=useState("General"),[priority,setPriority]=useState("Normal"),[unitId,setUnitId]=useState<number|null>(null),[residentId,setResidentId]=useState<number|null>(null),[contractorId,setContractorId]=useState<number|null>(null),[estimatedCost,setEstimatedCost]=useState(""),[notes,setNotes]=useState(""),[saving,setSaving]=useState(false),[message,setMessage]=useState(""),[deletedWorkOrders,setDeletedWorkOrders]=useState<number[]>([]);
  const blockUnits=useMemo(()=>units.filter(u=>u.blockId===block.id),[units,block.id]);
  const blockResidents=useMemo(()=>residents.filter(r=>r.blockId===block.id),[residents,block.id]);
- const blockWOs=useMemo(()=>workOrders.filter(w=>w.blockId===block.id),[workOrders,block.id]);
+ const blockWOs=useMemo(()=>workOrders.filter(w=>w.blockId===block.id&&!deletedWorkOrders.includes(w.id)),[workOrders,block.id,deletedWorkOrders]);
  const unitById=new Map(blockUnits.map(u=>[u.id,u]));
  async function raiseWorkOrder(e:React.FormEvent){
   e.preventDefault(); setSaving(true); setMessage("");
@@ -34,8 +34,12 @@ export default function BlockDashboard({block,units,residents,workOrders,contrac
  }
  async function cancelWorkOrder(id:number){
   const supabase=createClient();
-  const {error}=await supabase.from("work_orders").delete().eq("id",id);
-  if(!error) router.refresh();
+  const {data,error}=await supabase.from("work_orders").delete().eq("id",id).select("id");
+  if(error){setMessage("Work order could not be deleted: "+error.message);return;}
+  if(!data?.length){setMessage("Work order was not deleted. Please refresh and try again.");return;}
+  setDeletedWorkOrders(current=>[...current,id]);
+  setMessage("Work order deleted.");
+  router.refresh();
  }
  const residentOptions=unitId?blockResidents.filter(r=>r.unitId===unitId):blockResidents;
  const contractorMatches=(trade:string,workCategory:string)=>{
