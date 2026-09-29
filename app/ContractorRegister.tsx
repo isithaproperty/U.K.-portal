@@ -1,5 +1,5 @@
 "use client";
-import {useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
 import {useRouter} from "next/navigation";
 import {createClient} from "../lib/supabase/browser";
 import type {Contractor,ContractorDocument} from "./types";
@@ -9,6 +9,8 @@ const docTypes=["Public Liability","Employers Liability","Health & Safety Policy
 
 export default function ContractorRegister({contractors,documents}:{contractors:Contractor[];documents:ContractorDocument[]}){
  const router=useRouter();
+ const refreshedOnOpen=useRef(false);
+ useEffect(()=>{if(refreshedOnOpen.current)return;refreshedOnOpen.current=true;router.refresh();},[router]);
  const[selectedId,setSelectedId]=useState<number|null>(contractors[0]?.id??null);
  const[company,setCompany]=useState(""),[contact,setContact]=useState(""),[email,setEmail]=useState(""),[phone,setPhone]=useState(""),[trade,setTrade]=useState("General"),[registration,setRegistration]=useState(""),[vat,setVat]=useState(""),[notes,setNotes]=useState("");
  const[docType,setDocType]=useState("Public Liability"),[expiry,setExpiry]=useState(""),[docNotes,setDocNotes]=useState(""),[file,setFile]=useState<File|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
@@ -51,7 +53,7 @@ export default function ContractorRegister({contractors,documents}:{contractors:
   await supabase.storage.from("contractor-documents").remove([doc.storagePath]);router.refresh();
  }
  return <section className="contractor-page">
-  <div className="page-head"><div><p className="eyebrow">CONTRACTOR MANAGEMENT</p><h1>Contractors</h1><p>Manage approved suppliers, compliance documents and expiry dates before issuing work.</p></div></div>
+  <div className="page-head"><div><p className="eyebrow">CONTRACTOR MANAGEMENT</p><h1>Contractors</h1><p>Manage approved suppliers, compliance documents and expiry dates before issuing work.</p></div><button className="outline" onClick={()=>router.refresh()}>Refresh suppliers</button></div>
   <section className="stat-grid three"><article className="stat blue"><div><span>Contractors</span><strong>{contractors.length}</strong><small>Live supplier records</small></div><i>♢</i></article><article className="stat green"><div><span>Approved</span><strong>{contractors.filter(c=>c.status==="Approved").length}</strong><small>Available for work orders</small></div><i>✓</i></article><article className="stat amber"><div><span>Document alerts</span><strong>{expiredCount+expiringCount}</strong><small>{expiredCount} expired · {expiringCount} due in 30 days</small></div><i>!</i></article></section>
   <div className="contractor-layout">
    <section className="panel contractor-add"><p className="eyebrow">NEW CONTRACTOR</p><h2>Add contractor</h2><form onSubmit={addContractor}><label>Company name<input required value={company} onChange={e=>setCompany(e.target.value)}/></label><div className="contractor-form-grid"><label>Main contact<input value={contact} onChange={e=>setContact(e.target.value)}/></label><label>Trade<select value={trade} onChange={e=>setTrade(e.target.value)}>{trades.map(x=><option key={x}>{x}</option>)}</select></label><label>Email<input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Phone<input value={phone} onChange={e=>setPhone(e.target.value)}/></label><label>Company registration<input value={registration} onChange={e=>setRegistration(e.target.value)}/></label><label>VAT number<input value={vat} onChange={e=>setVat(e.target.value)}/></label></div><label>Notes<textarea rows={3} value={notes} onChange={e=>setNotes(e.target.value)}/></label><button className="primary" disabled={busy||!company.trim()}>Add contractor</button></form></section>
