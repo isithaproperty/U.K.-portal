@@ -3,6 +3,8 @@ import type {ChargeDocumentSettings} from "../../lib/service-charge-document";
 import ServiceChargeLedger from "../ServiceChargeLedger";
 import {chargeSummary,money,type ChargeEntry} from "../../lib/service-charges";
 import { useState } from "react";
+import Image from "next/image";
+import dashboardLogo from "../../public/aviaf-dashboard-logo.png";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/browser";
@@ -25,7 +27,7 @@ export default function TenantPortal({communications,communicationsUnavailable,c
   }catch{setMessage("Your request could not be sent. Please try again.");}finally{setBusy(false);}
  }
  return <main className="tenant-shell">
-  <header className="tenant-header"><Link href="/tenant" className="tenant-brand">London Property Portal<span>Tenant portal</span></Link>{preview?<Link href="/">Back to management</Link>:<button onClick={async()=>{await createClient().auth.signOut();window.location.href="/tenant/login";}}>Sign out</button>}</header>
+  <header className="tenant-header"><Link href="/tenant" className="tenant-brand"><Image className="resident-dashboard-brand" src={dashboardLogo} alt="AVIAF Asset Management" width={220} height={85} priority/><span>Resident portal</span></Link>{preview?<Link href="/">Back to management</Link>:<button onClick={async()=>{await createClient().auth.signOut();window.location.href="/tenant/login";}}>Sign out</button>}</header>
   {preview&&<div className="tenant-preview" role="status">Tenant preview · {home.name}. Requests cannot be submitted from this preview.</div>}
   <div className="tenant-content"><div className="tenant-heading"><p className="eyebrow">MY HOME</p><h1>{home.building}</h1><p>{home.unit} · {home.address.replace(/\n/g,", ")}</p>{homes.length>1&&<label>Choose home<select value={homeId} onChange={e=>{setHomeId(Number(e.target.value));setMessage("");}}>{homes.map(h=><option key={h.residentId} value={h.residentId}>{h.unit} · {h.building}</option>)}</select></label>}</div>
   <nav className="tenant-tabs" aria-label="Tenant portal">{([["home","My home"],["report","Report an issue"],["requests","My requests"],["charges","Service charges"],["communications","Communications"]] as const).map(([key,label])=><button key={key} aria-current={view===key?"page":undefined} className={view===key?"active":""} onClick={()=>{setView(key);setMessage("");}}>{label}</button>)}</nav>

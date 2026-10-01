@@ -1,4 +1,6 @@
 "use client";
+import Image from "next/image";
+import dashboardLogo from "../public/aviaf-dashboard-logo.png";
 import ResidentArchiveAction from "./ResidentArchiveAction";
 import {useState} from "react";
 import BlockRegister from "./BlockRegister";
@@ -26,7 +28,7 @@ export default function Portal({serviceCharges,today,tenantRequests,blocks,units
  const viewerName=isManager?viewerEmail.split("@")[0].split(/[._-]/).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(" "):residents.find(resident=>resident.email===viewerEmail)?.fullName??"Resident";
  return <main className="app-shell">
   <aside className={`sidebar ${mobile?"open":""}`}><button className="close-nav" aria-label="Close menu" onClick={()=>setMobile(false)}>×</button><div className="portfolio-switch"><span>PORTFOLIO</span><button>{isManager?"UK Residential":"My property"}</button></div><nav>{visibleNav.map(([key,label,icon])=><button key={key} className={view===key?"active":""} onClick={()=>{setView(key);setMobile(false);setQuery("")}}><i>{icon}</i>{label}</button>)}</nav><div className="side-footer"><div className="user"><span>{viewerName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{viewerName}</b><small>{isManager?"Portfolio manager":"Resident"}</small></div></div><button className="sign-out" onClick={async()=>{const {createClient}=await import("../lib/supabase/browser");await createClient().auth.signOut();window.location.href="/login";}}>Sign out</button></div></aside>
-  <section className="workspace"><header><button className="menu" aria-label="Open menu" onClick={()=>setMobile(true)}>☰</button><div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>setView("buildings")} placeholder="Search your blocks and addresses…"/></div></header><div className="content">
+  <section className="workspace"><header><button className="menu" aria-label="Open menu" onClick={()=>setMobile(true)}>☰</button><Image className="dashboard-brand" src={dashboardLogo} alt="AVIAF Asset Management" width={180} height={70} priority/><div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>setView("buildings")} placeholder="Search your blocks and addresses…"/></div></header><div className="content">
    {view==="overview"&&<Overview serviceCharges={serviceCharges} today={today} go={setView} blocks={blocks} isManager={isManager} viewerName={viewerName} ownUnitCount={ownUnits.length} contractors={contractors} workOrders={workOrders} buildingSafetyRecords={buildingSafetyRecords}/>}
    {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} ownUnits={ownUnits} onOpen={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
    {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard serviceCharges={serviceCharges} today={today} block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
