@@ -1,0 +1,6 @@
+import {redirect,notFound} from "next/navigation";
+import {createClient} from "../../../../lib/supabase/server";
+import WorkOrderDocument from "../../../WorkOrderDocument";
+import WorkOrderWorkflow from "../../../WorkOrderWorkflow";
+export const dynamic="force-dynamic";
+export default async function ContractorWO({params}:{params:Promise<{id:string}>}){const id=Number((await params).id);if(!Number.isSafeInteger(id)||id<1)notFound();const db=await createClient();const {data:{user}}=await db.auth.getUser();if(!user?.email)redirect(`/contractor/login?next=${encodeURIComponent(`/contractor/work-orders/${id}`)}`);const {data:d}=await db.from("work_order_dispatches").select("id,work_order_id,snapshot,recipient_email").eq("id",id).maybeSingle();if(!d||d.recipient_email!==user.email.toLowerCase())notFound();const {data:submissions}=await db.from("work_order_submissions").select("id,dispatch_id,job_card_path,invoice_path,job_card_name,invoice_name,uploaded_at,notification_status").eq("dispatch_id",id).order("uploaded_at",{ascending:false});return <main className="tenant-shell"><div className="tenant-content"><p className="eyebrow">AVIAF CONTRACTOR PORTAL</p><WorkOrderDocument document={d.snapshot}/><WorkOrderWorkflow workOrderId={d.work_order_id} dispatchId={id} manager={false} canSend={false} submissions={submissions??[]}/></div></main>;}
