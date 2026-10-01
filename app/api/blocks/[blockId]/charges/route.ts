@@ -1,3 +1,4 @@
+import {randomUUID} from "node:crypto";
 import {parse} from "csv-parse/sync";
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "../../../../../lib/supabase/server";
@@ -34,12 +35,17 @@ export async function POST(request:NextRequest,{params}:{params:Promise<{blockId
    if(!validDate(v.entry_date))fail("entry date must be YYYY-MM-DD.");
    if(v.entry_type==="Charge"&&(!validDate(v.due_date)||v.due_date<v.entry_date))fail("charge due date must be on or after its entry date.");
    if(v.entry_type!=="Charge"&&v.due_date)fail("payments and credits must have no due date.");
-   if(!v.reference||v.reference.length>100)fail("enter a reference up to 100 characters.");
-   const key=JSON.stringify([v.unit_number,v.entry_type,v.reference]);if(seen.has(key))fail("duplicate unit, type and reference in this upload.");seen.add(key);
-   return {...v,amount_pence};
+   if(v.reference.length>100)fail("invoice / entry number must be up to 100 characters.");
+   const request_id=v.reference?null:(typeof row.request_id==="string"?row.request_id:randomUUID());
+   if(request_id&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(request_id))fail("invalid save request.");
+   const key=JSON.stringify([v.unit_number,v.entry_type,v.reference]);if(v.reference&&seen.has(key))fail("duplicate unit, type and reference in this upload.");seen.add(key);
+   return {...v,amount_pence,request_id};
   });
  }catch(e){return NextResponse.json({error:e instanceof Error?e.message:"Invalid entries."},{status:400});}
  const {data,error}=await supabase.rpc("import_service_charges",{p_block_id:blockId,p_rows:rows});
  if(error)return NextResponse.json({error:"No entries were saved. Check unit numbers and charge details."},{status:400});
- return NextResponse.json({imported:data});
+ const requestIds=rows.flatMap(row=>row.request_id?[row.request_id]:[]);
+ let generated:string[]=[];
+ if(requestIds.length){const result=await supabase.from("service_charge_entries").select("reference").eq("block_id",blockId).in("request_id",requestIds);generated=(result.data??[]).map(row=>row.reference);}
+ return NextResponse.json({imported:data,generated});
 }
