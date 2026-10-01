@@ -13,7 +13,7 @@ export default async function TenantPage({searchParams}:{searchParams:Promise<{r
  const {data:member}=await supabase.from("portal_members").select("role").eq("email",email).maybeSingle();
  const preview=["owner","admin","manager"].includes(member?.role??"");
  const params=await searchParams;
- let query=supabase.from("residents").select("id,unit_id,block_id,full_name,email,phone");
+ let query=supabase.from("residents").select("id,unit_id,block_id,full_name,email,phone").is("archived_at",null);
  if(preview&&params.resident&&/^\d+$/.test(params.resident)) query=query.eq("id",Number(params.resident));
  else query=query.eq("email",email);
  const {data:residents,error}=await query;
