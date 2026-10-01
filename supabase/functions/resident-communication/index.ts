@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
     return json({ error: "You can only communicate with blocks in your own portfolio." }, 403);
   }
 
-  const { data: residentRows, error: residentError } = await admin.from("residents").select("id,email,block_id").in("block_id", blockIds);
+  const { data: residentRows, error: residentError } = await admin.from("residents").select("id,email,block_id").is("archived_at",null).in("block_id", blockIds);
   if (residentError) return json({ error: "Resident recipients could not be loaded." }, 500);
 
   const recipients = [...new Set((residentRows || []).map((r:any)=>String(r.email || "").trim().toLowerCase()).filter((e:string)=>e.includes("@")))];

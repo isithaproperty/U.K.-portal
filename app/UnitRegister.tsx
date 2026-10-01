@@ -1,5 +1,6 @@
 "use client";
 
+import ResidentArchiveAction from "./ResidentArchiveAction";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { Block, Resident, Unit } from "./types";
@@ -19,13 +20,14 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
-  const selected = blocks.find(block => block.id === blockId);
+  const [archived,setArchived]=useState(false);
+ const selected = blocks.find(block => block.id === blockId);
   const visibleUnits = useMemo(() => units.filter(unit => unit.blockId === blockId), [units, blockId]);
   const byUnit = useMemo(() => {
     const map = new Map<number, Resident[]>();
-    residents.filter(resident => resident.blockId === blockId).forEach(resident => map.set(resident.unitId, [...(map.get(resident.unitId) ?? []), resident]));
+    residents.filter(resident => resident.blockId === blockId && Boolean(resident.archivedAt)===archived).forEach(resident => map.set(resident.unitId, [...(map.get(resident.unitId) ?? []), resident]));
     return map;
-  }, [residents, blockId]);
+  }, [residents, blockId,archived]);
 
   async function importRows(body: string, contentType: string) {
     setBusy(true); setMessage("");
@@ -48,7 +50,7 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
 
   return <section className="unit-register">
     <div className="page-head"><div><p className="eyebrow">BLOCK MANAGEMENT</p><h1>Units & residents</h1><p>Add units to a block, then assign residents by their sign-in email.</p></div></div>
-    <section className="panel unit-select"><label>Choose block<select value={blockId} onChange={event => { setBlockId(Number(event.target.value)); setMessage(""); }}>{blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label><span>{visibleUnits.length} units entered · {residents.filter(row => row.blockId === blockId).length} resident assignments</span></section>
+    <section className="panel unit-select"><label>Choose block<select value={blockId} onChange={event => { setBlockId(Number(event.target.value)); setMessage(""); }}>{blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label><span>{visibleUnits.length} units entered · {residents.filter(row => row.blockId === blockId && Boolean(row.archivedAt)===archived).length} resident assignments</span></section>
     <div className="unit-grid">
       <section className="panel"><p className="eyebrow">ONE AT A TIME</p><h2>Add a unit or resident</h2><form onSubmit={event => { event.preventDefault(); void importRows(JSON.stringify({ rows: [{ unit_number: unitNumber, resident_name: residentName, resident_email: residentEmail, phone,payment_reference:paymentReference }] }), "application/json"); }}>
         <label>Unit number<input required maxLength={80} value={unitNumber} onChange={event => setUnitNumber(event.target.value)} placeholder="For example: Flat 1" /></label>
@@ -60,9 +62,9 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
       <section className="panel"><p className="eyebrow">BULK IMPORT</p><h2>Upload resident list</h2><p>Download the CSV template and enter one row per unit and resident. Repeat a unit number to assign more than one resident. An empty resident name and email creates a unit without access. Add the fixed payment reference when assigning residents. Joint residents in a unit share its service charge account and reference. Blank references preserve existing references.</p><button type="button" className="unit-secondary" onClick={downloadTemplate}>Download CSV template</button><label>CSV file<input type="file" accept=".csv,text/csv" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label><button className="primary" disabled={busy || !file || !blockId} onClick={() => file && void file.text().then(text => importRows(text, "text/csv"))}>Import to {selected?.name ?? "block"}</button><small>Up to 500 rows and 1 MB per import. Importing the same unit and email updates its details; it does not erase other residents.</small></section>
     </div>
     {message && <p className="unit-message" role="status">{message}</p>}
-    <section className="panel unit-list"><div className="panel-head"><div><p className="eyebrow">{selected?.name.toUpperCase()}</p><h2>Unit register</h2></div></div>{visibleUnits.length ? <div className="block-table-wrap"><table className="block-table"><thead><tr><th>Unit</th><th>Resident</th><th>Email</th><th>Phone</th><th>Payment reference</th><th>Tenant portal</th></tr></thead><tbody>{visibleUnits.flatMap(unit => {
+    <nav className="tenant-tabs"><button className={!archived?"active":""} onClick={()=>setArchived(false)}>Current residents</button><button className={archived?"active":""} onClick={()=>setArchived(true)}>Archive</button></nav><section className="panel unit-list"><div className="panel-head"><div><p className="eyebrow">{selected?.name.toUpperCase()}</p><h2>Unit register</h2></div></div>{visibleUnits.length ? <div className="block-table-wrap"><table className="block-table"><thead><tr><th>Unit</th><th>Resident</th><th>Email</th><th>Phone</th><th>Payment reference</th><th>Actions</th></tr></thead><tbody>{visibleUnits.flatMap(unit => {
       const people = byUnit.get(unit.id) ?? [];
-      return people.length ? people.map(person => <tr key={person.id}><td>{unit.unitNumber}</td><td>{person.fullName}</td><td>{person.email}</td><td>{person.phone ?? "—"}</td><td>{unit.paymentReference??"Not added"}</td><td><a href={`/tenant?resident=${person.id}`}>Preview tenant portal</a></td></tr>) : [<tr key={`unit-${unit.id}`}><td>{unit.unitNumber}</td><td>Unassigned</td><td>—</td><td>—</td><td>{unit.paymentReference??"Not added"}</td><td>—</td></tr>];
+      return people.length ? people.map(person => <tr key={person.id}><td>{unit.unitNumber}</td><td>{person.fullName}</td><td>{person.email}</td><td>{person.phone ?? "—"}</td><td>{unit.paymentReference??"Not added"}</td><td>{!person.archivedAt&&<a href={`/tenant?resident=${person.id}`}>Preview tenant portal</a>}<ResidentArchiveAction resident={person}/></td></tr>) : archived?[]:[<tr key={`unit-${unit.id}`}><td>{unit.unitNumber}</td><td>Unassigned</td><td>—</td><td>—</td><td>{unit.paymentReference??"Not added"}</td><td>—</td></tr>];
     })}</tbody></table></div> : <p>No units have been added to this block.</p>}</section>
   </section>;
 }
