@@ -22,3 +22,14 @@ Apply `supabase/tenant_portal.sql` once on the existing project. Registered resi
 ## Service charges
 
 Apply `supabase/service_charges.sql` once. Management can raise charges or record payments and credits under Service charges or a building’s service charge tab, and import up to 500 CSV entries atomically. A reference identifies an entry within its unit and type; reimporting it corrects the record. Residents see only their own unit account. Balances use posted entries as of the London date; payments and credits settle the earliest due charges first. No live financial amounts are seeded.
+
+
+### Fixed payment references and bank reconciliation
+
+Units & residents accepts `payment_reference` in the form and CSV template. Each unit account has one fixed reference shared by joint residents; it must be unique within its block. Blank references preserve existing assignments, and the legacy four-column resident CSV remains accepted. Statements use this fixed reference; ledger entry IDs continue to identify individual charges/payments.
+
+Service charges contains a per-block CSV bank statement drop zone. Users map date (DD/MM/YYYY or YYYY-MM-DD), reference/description, signed amount or money-in/money-out, and an optional bank transaction ID. Incoming payments are staged for review, outgoing/zero rows are skipped, and only exact reference matches within the selected block are suggested. Unmatched/ambiguous payments require a manual unit assignment. References added later are matched against existing pending rows.
+
+Confirming selected rows atomically adds payments to the unit ledgers and marks the bank rows posted. Row locks make repeat confirmations idempotent. Upload duplicates use the bank transaction ID when mapped, otherwise a canonical date/amount/reference/description fingerprint with occurrence numbering for repeated identical rows. Overlapping statements without transaction IDs can make identical genuine payments indistinguishable; review the reported duplicate count. Uploads are limited to 1,000 transactions / 2 MB and CSV; PDF/scanned statements require a bank CSV export.
+
+Apply `supabase/bank_reconciliation.sql` after the earlier service charge migrations. Bank statement rows are visible only to scoped managers; tenants see only their unit reference and posted ledger payments.

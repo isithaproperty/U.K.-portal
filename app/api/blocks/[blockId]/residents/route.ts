@@ -2,8 +2,9 @@ import { parse } from "csv-parse/sync";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../../lib/supabase/server";
 
-type ImportRow = { unit_number: string; resident_name: string; resident_email: string; phone: string };
-const headers = ["unit_number", "resident_name", "resident_email", "phone"];
+type ImportRow = { unit_number: string; resident_name: string; resident_email: string; phone: string;payment_reference:string };
+const legacyHeaders = ["unit_number", "resident_name", "resident_email", "phone"];
+const headers=[...legacyHeaders,"payment_reference"];
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest, context: { params: Promise<{ blockId: string }> }) {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bl
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user?.email) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const { data: membership } = await supabase.from("portal_members").select("role").eq("email", user.email.toLowerCase()).maybeSingle();
-  if (!membership || !["owner", "manager"].includes(membership.role)) return NextResponse.json({ error: "Manager access required." }, { status: 403 });
+  if (!membership || !["owner", "admin", "manager"].includes(membership.role)) return NextResponse.json({ error: "Manager access required." }, { status: 403 });
   const { data: block } = await supabase.from("blocks").select("id").eq("id", blockId).maybeSingle();
   if (!block) return NextResponse.json({ error: "Block not found." }, { status: 404 });
 
@@ -25,16 +26,18 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bl
       const body = await request.text();
       if (new TextEncoder().encode(body).length > 1_000_000) throw new Error("File exceeds 1 MB.");
       const records = parse(body, { bom: true, skip_empty_lines: true, trim: true, max_record_size: 20_000 }) as string[][];
-      if (records[0]?.map(value => value.toLowerCase()).join(",") !== headers.join(",")) throw new Error("Use the template columns: unit_number,resident_name,resident_email,phone.");
+      const columns=records[0]?.map(value=>value.toLowerCase());
+      if(columns?.join(",")!==headers.join(",")&&columns?.join(",")!==legacyHeaders.join(","))throw new Error("Use the resident CSV template, including the optional payment_reference column.");
       rows = records.slice(1).map((values) => {
-        if (values.length !== 4) throw new Error("Each row must have four columns.");
-        return Object.fromEntries(headers.map((key, index) => [key, values[index]])) as ImportRow;
+        if (values.length !== columns.length) throw new Error("Each row must match the template columns.");
+        return Object.fromEntries(headers.map((key, index) => [key, values[index]??""])) as ImportRow;
       });
     } else {
       const body = await request.json();
       rows = body.rows;
     }
     if (!Array.isArray(rows) || rows.length < 1 || rows.length > 500) throw new Error("Provide 1 to 500 units or residents.");
+    const references=new Map<string,string>();
     rows = rows.map((row, index) => {
       if (!row || typeof row !== "object") throw new Error(`Row ${index + 1}: invalid data.`);
       const values = Object.fromEntries(headers.map(key => [key, typeof row[key as keyof ImportRow] === "string" ? row[key as keyof ImportRow].trim() : ""])) as ImportRow;
@@ -43,6 +46,11 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bl
       if (values.resident_email && (!emailPattern.test(values.resident_email) || !values.resident_name)) throw new Error(`Row ${index + 1}: enter a valid resident email and name.`);
       if (!values.resident_email && (values.resident_name || values.phone)) throw new Error(`Row ${index + 1}: email is needed for resident details.`);
       if (values.resident_name.length > 200 || values.phone.length > 80) throw new Error(`Row ${index + 1}: resident details are too long.`);
+      values.payment_reference=values.payment_reference.toUpperCase().replace(/\s/g,"");
+      if(values.payment_reference&&(!/^[A-Z0-9][A-Z0-9/._-]*$/.test(values.payment_reference)||values.payment_reference.length>80))throw new Error(`Row ${index+1}: use a payment reference up to 80 letters, digits, slashes, dots or hyphens.`);
+      const previous=references.get(values.unit_number);
+      if(values.payment_reference&&previous&&previous!==values.payment_reference)throw new Error(`Row ${index+1}: joint residents must share the same unit payment reference.`);
+      if(values.payment_reference)references.set(values.unit_number,values.payment_reference);
       return values;
     });
   } catch (error) {

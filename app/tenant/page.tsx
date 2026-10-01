@@ -23,7 +23,7 @@ export default async function TenantPage({searchParams}:{searchParams:Promise<{r
  const unitIds=[...new Set(residents.map(r=>r.unit_id))];
  const [b,u,r]=await Promise.all([
   supabase.from("blocks").select("id,name,address,management_company,manager").in("id",blockIds),
-  supabase.from("units").select("id,unit_number").in("id",unitIds),
+  supabase.from("units").select("id,unit_number,payment_reference").in("id",unitIds),
   supabase.from("tenant_requests").select("id,resident_id,block_id,unit_id,title,description,category,priority,status,manager_reply,created_at,updated_at").in("resident_id",residents.map(x=>x.id)).order("created_at",{ascending:false})
  ]);
  if(b.error||u.error||r.error) return <main className="login-page"><div className="login-card"><h1>Tenant portal unavailable</h1><p>Please try again shortly.</p><Link href="/">Return to portal</Link></div></main>;
@@ -31,7 +31,7 @@ export default async function TenantPage({searchParams}:{searchParams:Promise<{r
  if(documentError)return <main className="login-page"><div className="login-card"><h1>Service charge documents unavailable</h1><p>Please try again shortly.</p></div></main>;
  const homes=residents.flatMap(person=>{
   const block=b.data?.find(x=>x.id===person.block_id),unit=u.data?.find(x=>x.id===person.unit_id);
-  return block&&unit?[{documentSettings:documentSettings?.find(x=>x.block_id===person.block_id)?.settings,residentId:person.id,unitId:person.unit_id,blockId:person.block_id,name:person.full_name,email:person.email,phone:person.phone,unit:unit.unit_number,building:block.name,address:block.address,company:block.management_company,manager:block.manager}]:[];
+  return block&&unit?[{documentSettings:documentSettings?.find(x=>x.block_id===person.block_id)?.settings,residentId:person.id,unitId:person.unit_id,blockId:person.block_id,name:person.full_name,email:person.email,phone:person.phone,unit:unit.unit_number,paymentReference:unit.payment_reference,building:block.name,address:block.address,company:block.management_company,manager:block.manager}]:[];
  });
  if(!homes.length) return <main className="login-page"><div className="login-card"><h1>Home details unavailable</h1><p>Please contact your managing team.</p><Link href="/">Return to portal</Link></div></main>;
  const {data:charges,error:chargeError}=await supabase.from("service_charge_entries").select("id,block_id,unit_id,entry_type,description,amount_pence,entry_date,due_date,reference").in("unit_id",unitIds).order("entry_date",{ascending:false});
