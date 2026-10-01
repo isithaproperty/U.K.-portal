@@ -36,5 +36,6 @@ export default async function TenantPage({searchParams}:{searchParams:Promise<{r
  if(!homes.length) return <main className="login-page"><div className="login-card"><h1>Home details unavailable</h1><p>Please contact your managing team.</p><Link href="/">Return to portal</Link></div></main>;
  const {data:charges,error:chargeError}=await supabase.from("service_charge_entries").select("id,block_id,unit_id,entry_type,description,amount_pence,entry_date,due_date,reference").in("unit_id",unitIds).order("entry_date",{ascending:false});
  if(chargeError)return <main className="login-page"><div className="login-card"><h1>Service charges unavailable</h1><p>Please try again shortly.</p></div></main>;
- return <TenantPortal charges={charges??[]} today={londonDate()} homes={homes} requests={r.data??[]} preview={preview}/>;
+ const {data:communications,error:communicationError}=await supabase.from("resident_messages").select("id,resident_id,block_id,subject,message,sent_at").in("resident_id",residents.map(person=>person.id)).order("sent_at",{ascending:false}).limit(200);
+ return <TenantPortal communications={communications??[]} communicationsUnavailable={!!communicationError} charges={charges??[]} today={londonDate()} homes={homes} requests={r.data??[]} preview={preview}/>;
 }
