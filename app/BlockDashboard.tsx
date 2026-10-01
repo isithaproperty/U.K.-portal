@@ -28,7 +28,7 @@ export default function BlockDashboard({serviceCharges,today,block,units,residen
     block_id:block.id,unit_id:unitId,resident_id:residentId,title:title.trim(),description:description.trim(),category,priority,status:"Open",contractor_id:contractorId,contractor:contractorId?contractors.find(c=>c.id===contractorId)?.companyName??null:null,estimated_cost:estimatedCost?Number(estimatedCost):null,notes:notes.trim(),
     deadline_date:deadline||null,special_terms:terms.trim(),expense_account:expenseAccount.trim(),address_snapshot:block.address,created_by:user.email.toLowerCase()
   }).select("id,work_order_number").single();
-  if(error){setMessage("Work order could not be saved.");setSaving(false);return;}
+  if(error){setMessage(error.message||"Work order could not be saved.");setSaving(false);return;}
   setTitle("");setDescription("");setCategory("General");setPriority("Normal");setUnitId(null);setResidentId(null);setContractorId(null);setEstimatedCost("");setNotes("");setDeadline("");setTerms("");setExpenseAccount("");setMessage("Work order "+created.work_order_number+" raised for "+block.name+". Open Document & uploads to send it to the contractor.");setSaving(false);router.refresh();
  }
  async function updateWorkOrder(id:number,patch:Record<string,unknown>){
