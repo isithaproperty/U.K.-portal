@@ -1,0 +1,4 @@
+create or replace function private.set_shared_section48_notice() returns trigger language plpgsql set search_path='' as $$ begin new.settings:=jsonb_set(new.settings,'{noticeAddress}',to_jsonb('1 Beauchamp Court, 10 Victors Way, Barnet, Hertfordshire, England, EN5 5TZ'::text),true);return new;end $$;
+revoke all on function private.set_shared_section48_notice() from public,anon,authenticated;
+create trigger shared_section48_notice before insert or update on public.service_charge_document_settings for each row execute function private.set_shared_section48_notice();
+insert into public.service_charge_document_settings(block_id,settings) select id,jsonb_build_object('noticeAddress','1 Beauchamp Court, 10 Victors Way, Barnet, Hertfordshire, England, EN5 5TZ') from public.blocks on conflict(block_id) do update set settings=public.service_charge_document_settings.settings||excluded.settings;
