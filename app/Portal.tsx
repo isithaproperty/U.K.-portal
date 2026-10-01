@@ -2,6 +2,8 @@
 import {useState} from "react";
 import BlockRegister from "./BlockRegister";
 import UnitRegister from "./UnitRegister";
+import TenantRequestRegister from "./TenantRequestRegister";
+import type {TenantRequest} from "./tenant/TenantPortal";
 import BlockDashboard from "./BlockDashboard";
 import ContractorRegister from "./ContractorRegister";
 import WorkOrderRegister from "./WorkOrderRegister";
@@ -13,7 +15,7 @@ type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contrac
 const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Building safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["messages","Communications","□"]];
 const headings=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
-export default function Portal({blocks,units,residents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail}:{blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
+export default function Portal({tenantRequests,blocks,units,residents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail}:{tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
  const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null),[selectedBlockId,setSelectedBlockId]=useState<number|null>(null);
  const visibleNav=isManager?nav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
  const ownUnits=units.filter(unit=>residents.some(resident=>resident.unitId===unit.id&&resident.email===viewerEmail));
@@ -26,7 +28,7 @@ export default function Portal({blocks,units,residents,workOrders,contractors,co
    {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
    {view==="units"&&isManager&&<UnitRegister key={unitBlock??0} blocks={blocks} units={units} residents={residents} initialBlockId={unitBlock}/>}
    {view==="golden"&&isManager&&<BuildingSafetyRegister blocks={blocks} records={buildingSafetyRecords}/>}
-   {view==="maintenance"&&isManager&&<WorkOrderRegister blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
+   {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={residents}/><WorkOrderRegister blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/></>}
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={residents}/>}
    {view==="finance"&&<EmptyModule title="Service charges & arrears" description="No service charge or arrears data has been added to this portal."/>}

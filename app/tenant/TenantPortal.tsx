@@ -1,0 +1,33 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "../../lib/supabase/browser";
+export type TenantHome={residentId:number;unitId:number;blockId:number;name:string;email:string;phone:string|null;unit:string;building:string;address:string;company:string;manager:string};
+export type TenantRequest={id:number;resident_id:number;block_id:number;unit_id:number;title:string;description:string;category:string;priority:string;status:string;manager_reply:string;created_at:string;updated_at:string};
+export default function TenantPortal({homes,requests,preview}:{homes:TenantHome[];requests:TenantRequest[];preview:boolean}){
+ const router=useRouter();
+ const [homeId,setHomeId]=useState(homes[0].residentId),[view,setView]=useState<"home"|"report"|"requests">("home");
+ const [title,setTitle]=useState(""),[description,setDescription]=useState(""),[category,setCategory]=useState("General"),[priority,setPriority]=useState("Normal"),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
+ const home=homes.find(h=>h.residentId===homeId)??homes[0];
+ const mine=requests.filter(r=>r.resident_id===home.residentId);
+ async function submit(e:React.FormEvent){
+  e.preventDefault();if(preview||busy)return;setBusy(true);setMessage("");
+  try{
+   const {error}=await createClient().from("tenant_requests").insert({block_id:home.blockId,unit_id:home.unitId,resident_id:home.residentId,title:title.trim(),description:description.trim(),category,priority,created_by:home.email});
+   if(error)throw error;
+   setTitle("");setDescription("");setMessage("Your maintenance request has been sent to the managing team.");setView("requests");router.refresh();
+  }catch{setMessage("Your request could not be sent. Please try again.");}finally{setBusy(false);}
+ }
+ return <main className="tenant-shell">
+  <header className="tenant-header"><Link href="/tenant" className="tenant-brand">London Property Portal<span>Tenant portal</span></Link>{preview?<Link href="/">Back to management</Link>:<button onClick={async()=>{await createClient().auth.signOut();window.location.href="/tenant/login";}}>Sign out</button>}</header>
+  {preview&&<div className="tenant-preview" role="status">Tenant preview · {home.name}. Requests cannot be submitted from this preview.</div>}
+  <div className="tenant-content"><div className="tenant-heading"><p className="eyebrow">MY HOME</p><h1>{home.building}</h1><p>{home.unit} · {home.address.replace(/\n/g,", ")}</p>{homes.length>1&&<label>Choose home<select value={homeId} onChange={e=>{setHomeId(Number(e.target.value));setMessage("");}}>{homes.map(h=><option key={h.residentId} value={h.residentId}>{h.unit} · {h.building}</option>)}</select></label>}</div>
+  <nav className="tenant-tabs" aria-label="Tenant portal">{([["home","My home"],["report","Report an issue"],["requests","My requests"]] as const).map(([key,label])=><button key={key} aria-current={view===key?"page":undefined} className={view===key?"active":""} onClick={()=>{setView(key);setMessage("");}}>{label}</button>)}</nav>
+  {message&&<p className="unit-message" role="status">{message}</p>}
+  {view==="home"&&<div className="tenant-grid"><section className="panel tenant-card"><p className="eyebrow">WELCOME, {home.name.toUpperCase()}</p><h2>Your home details</h2><dl><div><dt>Home</dt><dd>{home.unit}</dd></div><div><dt>Building</dt><dd>{home.building}</dd></div><div><dt>Managing agent</dt><dd>{home.company||"Not recorded"}</dd></div><div><dt>Property manager</dt><dd>{home.manager||"Not recorded"}</dd></div><div><dt>Email</dt><dd>{home.email}</dd></div><div><dt>Phone</dt><dd>{home.phone||"Not recorded"}</dd></div></dl></section><section className="panel tenant-card"><p className="eyebrow">MAINTENANCE</p><h2>{mine.filter(r=>r.status!=="Complete").length} open requests</h2><p>Report a maintenance issue and follow the managing team’s updates.</p><button className="primary" onClick={()=>setView("report")}>Report an issue</button><button className="unit-secondary" onClick={()=>setView("requests")}>View my requests</button></section></div>}
+  {view==="report"&&<section className="panel tenant-card tenant-form"><h2>Report a maintenance issue</h2><p>{home.unit} · {home.building}</p><form onSubmit={submit}><label>Issue title<input required maxLength={200} value={title} onChange={e=>setTitle(e.target.value)} placeholder="For example: leaking kitchen tap"/></label><div className="tenant-grid"><label>Category<select value={category} onChange={e=>setCategory(e.target.value)}>{["General","Plumbing","Electrical","Heating","Cleaning","Security","Other"].map(v=><option key={v}>{v}</option>)}</select></label><label>Priority<select value={priority} onChange={e=>setPriority(e.target.value)}>{["Low","Normal","High","Urgent"].map(v=><option key={v}>{v}</option>)}</select></label></div><label>What is happening?<textarea required maxLength={5000} rows={5} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Describe the issue, its location and when it started."/></label><p className="tenant-help">For immediate danger, call the emergency services. This form is not monitored as an emergency service.</p><button className="primary" disabled={preview||busy||!title.trim()||!description.trim()}>{busy?"Sending…":"Submit request"}</button></form></section>}
+  {view==="requests"&&<section className="panel tenant-card"><div className="panel-head"><h2>My maintenance requests</h2><button className="unit-secondary" onClick={()=>setView("report")}>Report an issue</button></div>{mine.length?<div className="tenant-request-list">{mine.map(r=><article key={r.id}><div className="tenant-request-heading"><h3>#{r.id} · {r.title}</h3><span>{r.status}</span></div><p>{r.description}</p><small>{r.category} · {r.priority} · Reported {new Intl.DateTimeFormat("en-GB",{dateStyle:"medium",timeZone:"Europe/London"}).format(new Date(r.created_at))}</small>{r.manager_reply&&<div className="tenant-reply"><strong>Managing team update</strong><p>{r.manager_reply}</p></div>}</article>)}</div>:<p>You have not reported any maintenance issues yet.</p>}</section>}
+  </div>
+ </main>;
+}

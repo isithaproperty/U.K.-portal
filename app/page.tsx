@@ -11,6 +11,7 @@ export default async function Home() {
   const email = user.email.toLowerCase();
   const { data: membership } = await supabase.from("portal_members").select("role,portfolio_manager").eq("email", email).maybeSingle();
   const isManager = membership?.role === "owner" || membership?.role === "admin" || membership?.role === "manager";
+  if (!isManager) redirect("/tenant");
   const [blockResult, unitResult, residentResult, workOrderResult, contractorResult, contractorDocumentResult, buildingSafetyResult] = await Promise.all([
     supabase.from("blocks").select("id,source_row,name,management_company,type,address,units,manager,financial_year_end,myblockman_export_enabled").order("name"),
     supabase.from("units").select("id,block_id,unit_number").order("unit_number"),
@@ -22,6 +23,8 @@ export default async function Home() {
   ]);
   if (blockResult.error || unitResult.error || residentResult.error || workOrderResult.error || contractorResult.error || contractorDocumentResult.error || buildingSafetyResult.error) return <main className="login-page"><div className="login-card"><h1>Portfolio unavailable</h1><p>Please try again shortly.</p></div></main>;
   if (!isManager && !residentResult.data?.some(row => row.email === email)) return <main className="login-page"><div className="login-card"><h1>Access pending</h1><p>This email has not been assigned to a unit. Ask the managing team for access.</p></div></main>;
+  const {data:tenantRequests,error:tenantRequestError}=await supabase.from("tenant_requests").select("id,resident_id,block_id,unit_id,title,description,category,priority,status,manager_reply,created_at,updated_at").order("created_at",{ascending:false});
+  if(tenantRequestError) return <main className="login-page"><div className="login-card"><h1>Tenant requests unavailable</h1><p>Please try again shortly.</p></div></main>;
   const data = blockResult.data;
   const blocks: Block[] = (data ?? []).map(row => ({
     id: row.id, name: row.name, managementCompany: row.management_company,
@@ -34,5 +37,5 @@ export default async function Home() {
   const contractors: Contractor[] = (contractorResult.data ?? []).map(row => ({id:row.id,companyName:row.company_name,contactName:row.contact_name,email:row.email,phone:row.phone,trade:row.trade,companyRegistration:row.company_registration,vatNumber:row.vat_number,status:row.status,notes:row.notes,createdAt:row.created_at,updatedAt:row.updated_at}));
   const contractorDocuments: ContractorDocument[] = (contractorDocumentResult.data ?? []).map(row => ({id:row.id,contractorId:row.contractor_id,documentType:row.document_type,fileName:row.file_name,storagePath:row.storage_path,mimeType:row.mime_type,fileSize:row.file_size,expiryDate:row.expiry_date,notes:row.notes,uploadedAt:row.uploaded_at}));
   const buildingSafetyRecords: BuildingSafetyRecord[] = (buildingSafetyResult.data ?? []).map(row => ({id:row.id,blockId:row.block_id,category:row.category,title:row.title,status:row.status,dueDate:row.due_date,notes:row.notes,fileName:row.file_name,storagePath:row.storage_path,createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}));
-  return <Portal blocks={blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} contractorDocuments={contractorDocuments} buildingSafetyRecords={buildingSafetyRecords} isManager={isManager} memberRole={membership?.role??null} portfolioManager={membership?.portfolio_manager??null} viewerEmail={email} />;
+  return <Portal tenantRequests={tenantRequests??[]} blocks={blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} contractorDocuments={contractorDocuments} buildingSafetyRecords={buildingSafetyRecords} isManager={isManager} memberRole={membership?.role??null} portfolioManager={membership?.portfolio_manager??null} viewerEmail={email} />;
 }
