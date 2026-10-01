@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { createClient } from "../../lib/supabase/browser";
 
-export default function Login() {
+export default function Login({tenant=false}:{tenant?:boolean}) {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -12,11 +12,11 @@ export default function Login() {
     try {
       const { error } = await createClient().auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback${tenant?"?next=/tenant":""}` },
       });
       setMessage(error ? error.message : "Check your email for a sign-in link.");
     } catch { setMessage("Sign-in is unavailable right now."); }
     finally { setBusy(false); }
   }
-  return <main className="login-page"><form onSubmit={submit} className="login-card"><p className="eyebrow">LONDON PROPERTY PORTAL</p><h1>Sign in</h1><p>Enter your work email to receive a secure sign-in link.</p><label>Email address<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><button className="primary" disabled={busy}>{busy ? "Sending…" : "Send sign-in link"}</button>{message && <p role="status">{message}</p>}</form></main>;
+  return <main className="login-page"><form onSubmit={submit} className="login-card"><p className="eyebrow">LONDON PROPERTY PORTAL</p><h1>{tenant?"Tenant sign in":"Sign in"}</h1><p>{tenant?"Enter the email registered against your home to receive a secure sign-in link.":"Enter your work email to receive a secure sign-in link."}</p><label>Email address<input required type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><button className="primary" disabled={busy}>{busy ? "Sending…" : "Send sign-in link"}</button>{message && <p role="status">{message}</p>}</form></main>;
 }

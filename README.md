@@ -14,3 +14,7 @@ Run `npm ci && npm run build` locally. The app uses Supabase Row Level Security:
 Managers can choose a block under **Units & residents**, add one unit at a time, or upload a CSV using the built-in template. The columns are `unit_number,resident_name,resident_email,phone`. Repeat a unit number for multiple residents; leave the last three columns empty to create an unassigned unit. Importing the same unit and email updates that assignment without deleting anyone else. The import is atomic and capped at 500 rows. Resident contact details are stored in Supabase and must not be committed to this public repository. No unit or resident test records are seeded.
 
 Residents receive a sign-in link from the portal's login page after the managing team imports their email. Their portfolio and building list are filtered at the database level. Other management modules start empty and are not connected to data yet.
+
+## Tenant portal
+
+Apply `supabase/tenant_portal.sql` once on the existing project. Registered residents sign in at `/tenant/login` and are directed to `/tenant`, where they see their home and report or track maintenance requests. Tenants cannot access management costs, internal work-order notes, other residents or building safety information. Managers can preview a resident from Units & residents and respond to tenant requests under Work orders. The preview is read-only. The database enforces resident assignments and manager portfolio scope. Test resident details stay in the database and are never seeded into source.

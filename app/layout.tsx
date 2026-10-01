@@ -5,6 +5,7 @@ import "./block-register.css";
 import "./clean.css";
 import "./login.css";
 import "./units.css";
+import "./tenant.css";
 export const metadata: Metadata = {
   title: "London Property Portal",
   description: "UK property register and management workspace.",
