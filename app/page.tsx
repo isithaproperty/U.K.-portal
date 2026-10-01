@@ -28,9 +28,11 @@ export default async function Home() {
   if(tenantRequestError) return <main className="login-page"><div className="login-card"><h1>Tenant requests unavailable</h1><p>Please try again shortly.</p></div></main>;
   const {data:serviceCharges,error:chargeError}=await supabase.from("service_charge_entries").select("id,block_id,unit_id,entry_type,description,amount_pence,entry_date,due_date,reference").order("entry_date",{ascending:false});
   if(chargeError) return <main className="login-page"><div className="login-card"><h1>Service charges unavailable</h1><p>Please try again shortly.</p></div></main>;
+  const {data:documentSettings,error:documentError}=await supabase.from("service_charge_document_settings").select("block_id,settings");
+  if(documentError) return <main className="login-page"><div className="login-card"><h1>Service charge documents unavailable</h1><p>Please try again shortly.</p></div></main>;
   const data = blockResult.data;
   const blocks: Block[] = (data ?? []).map(row => ({
-    id: row.id, name: row.name, managementCompany: row.management_company,
+    documentSettings:documentSettings?.find(x=>x.block_id===row.id)?.settings, id: row.id, name: row.name, managementCompany: row.management_company,
     type: row.type, address: row.address, units: row.units, manager: row.manager,
     financialYearEnd: row.financial_year_end, myBlockManExportEnabled: row.myblockman_export_enabled,
   }));

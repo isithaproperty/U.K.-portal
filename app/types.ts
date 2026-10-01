@@ -1,4 +1,6 @@
+import type {ChargeDocumentSettings} from "../lib/service-charge-document";
 export type Block = {
+  documentSettings?: ChargeDocumentSettings;
   id: number;
   name: string;
   managementCompany: string;
