@@ -1,0 +1,3 @@
+update public.service_charge_document_settings set settings=jsonb_set(settings,'{paymentText}',to_jsonb('Pursuant to the Section 48(1) of the Landlord and Tenant Act 1987, the address at which notices (including notices in proceedings) may be served by you is: 1 Beauhamp Court, 10 Victors Way, Barnet, Hertfordshire, England, EN5 5TZ
+
+Service charges have now been applied to your account and any balance must be paid within 28 days. Please help your management company to meet its day-to-day expenses by paying your service charge today. When making a payment through your bank, please use the reference provided on your demand. Please see the payment advice below.'::text),true);
