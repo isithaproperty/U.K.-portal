@@ -1,0 +1,3 @@
+export type ChargeDocumentSettings={landlord:string;noticeAddress:string;agentAddress:string;bankName:string;accountName:string;sortCode:string;accountNumber:string;paymentText:string};
+export const blankDocumentSettings:ChargeDocumentSettings={landlord:"",noticeAddress:"",agentAddress:"",bankName:"",accountName:"",sortCode:"",accountNumber:"",paymentText:""};
+export const documentFields:[keyof ChargeDocumentSettings,string][]=[["landlord","Landlord name"],["noticeAddress","Section 48 notice address"],["agentAddress","Managing agent address"],["bankName","Bank name"],["accountName","Account name"],["sortCode","Sort code"],["accountNumber","Account number"],["paymentText","Payment instructions / terms"]];
