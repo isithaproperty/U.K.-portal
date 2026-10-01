@@ -10,3 +10,16 @@
 
 /* Match the main AVIAF portal palette. */
 .tenant-shell .tenant-card,.tenant-shell .tenant-request-list article,.tenant-shell .tenant-message-list article{background:#fffdfa;border-color:#e5ddcf}.tenant-tabs button.active{color:#18140f}.tenant-header button{color:#3d352b}.tenant-header button:hover{background:#f5ead0}.tenant-request-heading span{color:#765616}.tenant-shell .primary{background:#c99a2e;color:#17120b}.tenant-shell .primary:hover{background:#b98922}.tenant-shell .outline{background:#fffdfa;color:#3d352b;border-color:#d9cfbd}
+
+/* AVIAF resident navigation mirrors the main portal's black and gold navigation. */
+.tenant-header{background:linear-gradient(180deg,#15120f,#080706);border-bottom:1px solid #332b20;color:#fff}
+.tenant-brand .resident-dashboard-brand{background:#fffdfa;border-radius:6px;padding:6px 10px}
+.tenant-brand span{color:#d8bf81;margin-top:8px}
+.tenant-header>button,.tenant-header>a:not(.tenant-brand){background:#241e16;color:#fff;border:1px solid #67522b;border-radius:6px;padding:10px 16px}
+.tenant-header>button:hover,.tenant-header>a:not(.tenant-brand):hover{background:#3a2d1b}
+.tenant-tabs{background:#12100e;border:1px solid #332b20;border-radius:8px;padding:6px;gap:4px}
+.tenant-tabs button{color:#d9cdb9;border-radius:5px;padding:12px 18px}
+.tenant-tabs button:hover{background:#241e16;color:#fff}
+.tenant-tabs button.active{background:#c99a2e;color:#17120b;border-bottom-color:#c99a2e}
+.tenant-header :focus-visible,.tenant-tabs :focus-visible{outline-color:#d3a944}
+@media(max-width:650px){.tenant-tabs button{padding:12px;font-size:.95rem}}
