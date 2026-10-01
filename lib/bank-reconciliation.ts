@@ -1,0 +1,9 @@
+export type BankRow={id:number;block_id:number;transaction_date:string;amount_pence:number;bank_reference:string;description:string;transaction_id:string;source_file:string;status:"Pending"|"Posted"|"Ignored";unit_id:number|null;payment_entry_id:number|null;imported_at:string};
+export type BankMapping={date:string;reference:string;description:string;amount:string;credit:string;debit:string;transactionId:string;dateFormat:"ISO"|"UK"};
+export function bankMoney(value:string){const s=value.trim().replace(/[£,\s]/g,"");if(!s)return 0;if(!/^[+-]?\d+(\.\d{1,2})?$/.test(s))throw new Error("Invalid amount. Use pounds with up to two decimal places.");const pence=Math.round(Number(s)*100);if(!Number.isSafeInteger(pence)||Math.abs(pence)>100000000)throw new Error("Amount outside supported range.");return pence;}
+export function bankDate(value:string,format:BankMapping["dateFormat"]){let s=value.trim();if(format==="UK"){const parts=/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/.exec(s);if(!parts)throw new Error("Use DD/MM/YYYY dates.");s=`${parts[3]}-${parts[2].padStart(2,"0")}-${parts[1].padStart(2,"0")}`;}if(!/^\d{4}-\d{2}-\d{2}$/.test(s)||!Number.isFinite(Date.parse(s))||new Date(s).toISOString().slice(0,10)!==s)throw new Error("Invalid transaction date.");return s;}
+export function matchBankReference(row:Pick<BankRow,"bank_reference"|"description">,units:{id:number;paymentReference:string|null}[]){
+ const text=`${row.bank_reference} ${row.description}`.toUpperCase();
+ const matched=units.filter(u=>{const ref=u.paymentReference?.toUpperCase().replace(/\s/g,"");if(!ref)return false;const pattern=ref.split("").map(c=>c.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("\\s*");return new RegExp(`(^|[^A-Z0-9/._-])${pattern}($|[^A-Z0-9/._-])`).test(text);});
+ return {unitId:matched.length===1?matched[0].id:null,reason:matched.length===1?"Reference matched":matched.length>1?"Multiple references — review":"No reference match"};
+}

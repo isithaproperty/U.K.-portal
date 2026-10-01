@@ -15,7 +15,7 @@ export default async function Home() {
   if (!isManager) redirect("/tenant");
   const [blockResult, unitResult, residentResult, workOrderResult, contractorResult, contractorDocumentResult, buildingSafetyResult] = await Promise.all([
     supabase.from("blocks").select("id,source_row,name,management_company,type,address,units,manager,financial_year_end,myblockman_export_enabled").order("name"),
-    supabase.from("units").select("id,block_id,unit_number").order("unit_number"),
+    supabase.from("units").select("id,block_id,unit_number,payment_reference").order("unit_number"),
     supabase.from("residents").select("id,unit_id,block_id,full_name,email,phone"),
     supabase.from("work_orders").select("id,work_order_number,block_id,unit_id,resident_id,contractor_id,title,description,category,priority,status,contractor,estimated_cost,actual_cost,notes,address_snapshot,payment_status,payment_approved_by,payment_approved_at,paid_at,created_by,created_at,updated_at").order("created_at",{ascending:false}),
     supabase.from("contractors").select("id,company_name,contact_name,email,phone,trade,company_registration,vat_number,status,notes,created_at,updated_at").order("company_name"),
@@ -36,7 +36,7 @@ export default async function Home() {
     type: row.type, address: row.address, units: row.units, manager: row.manager,
     financialYearEnd: row.financial_year_end, myBlockManExportEnabled: row.myblockman_export_enabled,
   }));
-  const units: Unit[] = (unitResult.data ?? []).map(row => ({ id: row.id, blockId: row.block_id, unitNumber: row.unit_number }));
+  const units: Unit[] = (unitResult.data ?? []).map(row => ({ id: row.id, blockId: row.block_id, unitNumber: row.unit_number, paymentReference:row.payment_reference }));
   const residents: Resident[] = (residentResult.data ?? []).map(row => ({ id: row.id, unitId: row.unit_id, blockId: row.block_id, fullName: row.full_name, email: row.email, phone: row.phone }));
   const workOrders: WorkOrder[] = (workOrderResult.data ?? []).map(row => ({ id:row.id, workOrderNumber:row.work_order_number, blockId:row.block_id, unitId:row.unit_id, residentId:row.resident_id, contractorId:row.contractor_id, title:row.title, description:row.description, category:row.category, priority:row.priority, status:row.status, contractor:row.contractor, estimatedCost:row.estimated_cost===null?null:Number(row.estimated_cost), actualCost:row.actual_cost===null?null:Number(row.actual_cost), notes:row.notes, addressSnapshot:row.address_snapshot, paymentStatus:row.payment_status, paymentApprovedBy:row.payment_approved_by, paymentApprovedAt:row.payment_approved_at, paidAt:row.paid_at, createdBy:row.created_by, createdAt:row.created_at, updatedAt:row.updated_at }));
   const contractors: Contractor[] = (contractorResult.data ?? []).map(row => ({id:row.id,companyName:row.company_name,contactName:row.contact_name,email:row.email,phone:row.phone,trade:row.trade,companyRegistration:row.company_registration,vatNumber:row.vat_number,status:row.status,notes:row.notes,createdAt:row.created_at,updatedAt:row.updated_at}));
