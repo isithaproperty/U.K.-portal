@@ -1,0 +1,4 @@
+export function londonToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+export function documentTypeKey(type:string){const key=type.trim().toLowerCase();return key==='public liability'?'public liability insurance':key==='employers liability'?'employers liability insurance':key;}
+export function latestDocuments<T extends {id:number;documentType:string;uploadedAt:string}>(documents:T[]){const latest=new Map<string,T>();for(const d of documents){const key=documentTypeKey(d.documentType),old=latest.get(key);if(!old||d.uploadedAt>old.uploadedAt||(d.uploadedAt===old.uploadedAt&&d.id>old.id))latest.set(key,d);}return [...latest.values()];}
+export function daysToExpiry(expiry:string,today=londonToday()){return Math.round((Date.parse(expiry+'T12:00:00Z')-Date.parse(today+'T12:00:00Z'))/86400000);}

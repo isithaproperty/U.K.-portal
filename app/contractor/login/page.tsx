@@ -7,7 +7,7 @@ export default function ContractorLogin(){
  useEffect(()=>{const q=new URLSearchParams(window.location.search);setEmail(q.get("email")||"");},[]);
  async function submit(e:React.FormEvent){
   e.preventDefault();setBusy(true);setMessage("");
-  const q=new URLSearchParams(window.location.search);const invite=q.get("invite")||"";const requested=q.get("next");const next=requested&&/^\/contractor\/work-orders\/\d+$/.test(requested)?requested:invite?`/contractor/onboarding?invite=${encodeURIComponent(invite)}`:"/contractor/onboarding";const redirect=`${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+  const q=new URLSearchParams(window.location.search);const invite=q.get("invite")||"";const requested=q.get("next");const next=requested&&/^\/contractor\/(?:work-orders|renewals)\/\d+$/.test(requested)?requested:invite?`/contractor/onboarding?invite=${encodeURIComponent(invite)}`:"/contractor/onboarding";const redirect=`${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
   const {error}=await createClient().auth.signInWithOtp({email:email.trim().toLowerCase(),options:{emailRedirectTo:redirect}});
   setMessage(error?error.message:"Check your email for your secure portal sign-in link.");
   setBusy(false);
