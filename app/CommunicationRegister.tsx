@@ -38,9 +38,9 @@ export default function CommunicationRegister({blocks,residents}:{blocks:Block[]
   setBusy(true);setStatus("");
   const supabase=createClient();
   const {data,error}=await supabase.functions.invoke("resident-communication",{body:{blockIds:selected,subject:subject.trim(),message:message.trim()}});
-  if(error){setStatus(error.message||"Communication could not be sent.");setBusy(false);return;}
+  if(error){let detail=error.message||"Communication could not be sent.";try{if(error.context instanceof Response){const result=await error.context.clone().json();if(result.error)detail=result.error+(result.missing?.length?": "+result.missing.join(", "):"");}}catch{}setStatus(detail);setBusy(false);return;}
   if(data?.error){setStatus(data.error+(data.missing?.length?": "+data.missing.join(", "):""));setBusy(false);return;}
-  setStatus(`Communication sent to ${data.recipientCount} resident email address${data.recipientCount===1?"":"es"} across ${data.blockCount} block${data.blockCount===1?"":"s"}.`);
+  setStatus(`Communication sent to ${data.recipientCount} resident email address${data.recipientCount===1?"":"es"} across ${data.blockCount} block${data.blockCount===1?"":"s"}. It is also available on their resident dashboards.`);
   setSubject("");setMessage("");setBusy(false);
  }
 
@@ -64,7 +64,7 @@ export default function CommunicationRegister({blocks,residents}:{blocks:Block[]
     {selectedBlocks.length>0&&<div className="selected-block-tags">{selectedBlocks.map(b=><button key={b.id} onClick={()=>toggle(b.id)} title="Remove block">{b.name}<span>×</span></button>)}</div>}
     <label>Subject<input value={subject} onChange={e=>setSubject(e.target.value)} placeholder="Communication subject"/></label>
     <label>Message<textarea rows={10} value={message} onChange={e=>setMessage(e.target.value)} placeholder="Write the resident communication…"/></label>
-    <div className="communication-send-note"><strong>Recipient protection</strong><p>Each resident receives an individual email. Email addresses are not exposed to other residents.</p></div>
+    <div className="communication-send-note"><strong>Recipient protection</strong><p>Each resident receives an individual email and a copy on their resident dashboard. Email addresses are not exposed to other residents.</p></div>
     <button className="primary" disabled={busy||!selected.length||!recipients.length||!subject.trim()||!message.trim()} onClick={()=>void sendCommunication()}>{busy?"Sending…":`Send to ${recipients.length} resident${recipients.length===1?"":"s"}`}</button>
    </section>
   </div>
