@@ -33,3 +33,8 @@ Service charges contains a per-block CSV bank statement drop zone. Users map dat
 Confirming selected rows atomically adds payments to the unit ledgers and marks the bank rows posted. Row locks make repeat confirmations idempotent. Upload duplicates use the bank transaction ID when mapped, otherwise a canonical date/amount/reference/description fingerprint with occurrence numbering for repeated identical rows. Overlapping statements without transaction IDs can make identical genuine payments indistinguishable; review the reported duplicate count. Uploads are limited to 1,000 transactions / 2 MB and CSV; PDF/scanned statements require a bank CSV export.
 
 Apply `supabase/bank_reconciliation.sql` after the earlier service charge migrations. Bank statement rows are visible only to scoped managers; tenants see only their unit reference and posted ledger payments.
+
+
+### Automatic invoice numbers
+
+New charge entries receive database-generated `INV-` numbers; manual payments and credits receive `PAY-` and `CR-` numbers. Numbers use the global entry identity, stay stable on correction, and may have gaps. The tenant account payment reference is separate and fixed. Blank CSV reference fields generate new numbers; existing numbers retain the correction/import behavior. Reimporting blank CSV rows creates new entries. Single-entry form saves carry an idempotency request UUID, preventing network retries from creating duplicate invoices. Apply `supabase/automatic_invoice_numbers.sql` after earlier ledger migrations.
