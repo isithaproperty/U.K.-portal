@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
 import TenantPortal from "./TenantPortal";
+import {londonDate} from "../../lib/service-charges";
 
 export const dynamic = "force-dynamic";
 export default async function TenantPage({searchParams}:{searchParams:Promise<{resident?:string}>}) {
@@ -31,5 +32,7 @@ export default async function TenantPage({searchParams}:{searchParams:Promise<{r
   return block&&unit?[{residentId:person.id,unitId:person.unit_id,blockId:person.block_id,name:person.full_name,email:person.email,phone:person.phone,unit:unit.unit_number,building:block.name,address:block.address,company:block.management_company,manager:block.manager}]:[];
  });
  if(!homes.length) return <main className="login-page"><div className="login-card"><h1>Home details unavailable</h1><p>Please contact your managing team.</p><Link href="/">Return to portal</Link></div></main>;
- return <TenantPortal homes={homes} requests={r.data??[]} preview={preview}/>;
+ const {data:charges,error:chargeError}=await supabase.from("service_charge_entries").select("id,block_id,unit_id,entry_type,description,amount_pence,entry_date,due_date,reference").in("unit_id",unitIds).order("entry_date",{ascending:false});
+ if(chargeError)return <main className="login-page"><div className="login-card"><h1>Service charges unavailable</h1><p>Please try again shortly.</p></div></main>;
+ return <TenantPortal charges={charges??[]} today={londonDate()} homes={homes} requests={r.data??[]} preview={preview}/>;
 }

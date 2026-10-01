@@ -2,6 +2,8 @@
 import {useState} from "react";
 import BlockRegister from "./BlockRegister";
 import UnitRegister from "./UnitRegister";
+import ServiceChargeRegister from "./ServiceChargeRegister";
+import {chargeSummary,type ChargeEntry} from "../lib/service-charges";
 import TenantRequestRegister from "./TenantRequestRegister";
 import type {TenantRequest} from "./tenant/TenantPortal";
 import BlockDashboard from "./BlockDashboard";
@@ -15,7 +17,7 @@ type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contrac
 const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Building safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["messages","Communications","□"]];
 const headings=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
-export default function Portal({tenantRequests,blocks,units,residents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail}:{tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
+export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail}:{serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
  const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null),[selectedBlockId,setSelectedBlockId]=useState<number|null>(null);
  const visibleNav=isManager?nav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
  const ownUnits=units.filter(unit=>residents.some(resident=>resident.unitId===unit.id&&resident.email===viewerEmail));
@@ -23,19 +25,22 @@ export default function Portal({tenantRequests,blocks,units,residents,workOrders
  return <main className="app-shell">
   <aside className={`sidebar ${mobile?"open":""}`}><button className="close-nav" aria-label="Close menu" onClick={()=>setMobile(false)}>×</button><div className="portfolio-switch"><span>PORTFOLIO</span><button>{isManager?"UK Residential":"My property"}</button></div><nav>{visibleNav.map(([key,label,icon])=><button key={key} className={view===key?"active":""} onClick={()=>{setView(key);setMobile(false);setQuery("")}}><i>{icon}</i>{label}</button>)}</nav><div className="side-footer"><div className="user"><span>{viewerName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{viewerName}</b><small>{isManager?"Portfolio manager":"Resident"}</small></div></div><button className="sign-out" onClick={async()=>{const {createClient}=await import("../lib/supabase/browser");await createClient().auth.signOut();window.location.href="/login";}}>Sign out</button></div></aside>
   <section className="workspace"><header><button className="menu" aria-label="Open menu" onClick={()=>setMobile(true)}>☰</button><div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>setView("buildings")} placeholder="Search your blocks and addresses…"/></div></header><div className="content">
-   {view==="overview"&&<Overview go={setView} blocks={blocks} isManager={isManager} viewerName={viewerName} ownUnitCount={ownUnits.length} contractors={contractors} workOrders={workOrders} buildingSafetyRecords={buildingSafetyRecords}/>}
+   {view==="overview"&&<Overview serviceCharges={serviceCharges} today={today} go={setView} blocks={blocks} isManager={isManager} viewerName={viewerName} ownUnitCount={ownUnits.length} contractors={contractors} workOrders={workOrders} buildingSafetyRecords={buildingSafetyRecords}/>}
    {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} ownUnits={ownUnits} onOpen={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
-   {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
+   {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard serviceCharges={serviceCharges} today={today} block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
    {view==="units"&&isManager&&<UnitRegister key={unitBlock??0} blocks={blocks} units={units} residents={residents} initialBlockId={unitBlock}/>}
    {view==="golden"&&isManager&&<BuildingSafetyRegister blocks={blocks} records={buildingSafetyRecords}/>}
    {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={residents}/><WorkOrderRegister blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/></>}
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={residents}/>}
-   {view==="finance"&&<EmptyModule title="Service charges & arrears" description="No service charge or arrears data has been added to this portal."/>}
+   {view==="finance"&&<ServiceChargeRegister blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
    {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
   </div></section></main>
 }
-function Overview({go,blocks,isManager,viewerName,ownUnitCount,contractors=[],workOrders=[],buildingSafetyRecords=[]}:{go:(view:View)=>void;blocks:Block[];isManager:boolean;viewerName:string;ownUnitCount:number;contractors?:Contractor[];workOrders?:WorkOrder[];buildingSafetyRecords?:BuildingSafetyRecord[]}){
+function Overview({serviceCharges,today,go,blocks,isManager,viewerName,ownUnitCount,contractors=[],workOrders=[],buildingSafetyRecords=[]}:{serviceCharges:ChargeEntry[];today:string;go:(view:View)=>void;blocks:Block[];isManager:boolean;viewerName:string;ownUnitCount:number;contractors?:Contractor[];workOrders?:WorkOrder[];buildingSafetyRecords?:BuildingSafetyRecord[]}){
+ const unitBalances=[...new Set(serviceCharges.map(e=>e.unit_id))].map(id=>chargeSummary(serviceCharges.filter(e=>e.unit_id===id),today));
+ const arrears=unitBalances.reduce((n,s)=>n+s.overdue,0);
+ const outstanding=unitBalances.reduce((n,s)=>n+Math.max(0,s.balance),0);
  const openWOs=workOrders.filter(wo=>wo.status!=="Complete").length;
  const safetyCounts={
   Current:buildingSafetyRecords.filter(r=>r.status==="Current").length,
@@ -98,7 +103,7 @@ function Overview({go,blocks,isManager,viewerName,ownUnitCount,contractors=[],wo
     {label:"Current",value:safetyCounts.Current,tone:"green"},
     {label:"Outstanding",value:safetyCounts["Action required"]+safetyCounts["Under review"]+safetyCounts.Expired,tone:"amber"}
   ]} emptyLabel="No compliance records yet" onClick={()=>go("golden")}/>
-  <PieSummary title="Levy arrears" subtitle="Service charge collection" segments={[]} emptyLabel="No levy data yet" onClick={()=>go("finance")}/>
+  <PieSummary unitLabel="GBP" title="Service charges" subtitle="Outstanding balances (£)" segments={[{label:"Overdue",value:arrears/100,tone:"amber"},{label:"Not overdue",value:(outstanding-arrears)/100,tone:"green"}]} emptyLabel={serviceCharges.length?"No outstanding balance":"No service charge records yet"} onClick={()=>go("finance")}/>
   <PieSummary title="Contractor payments" subtitle="Completed work orders" segments={[
     {label:"Awaiting approval",value:paymentCounts.Awaiting,tone:"amber"},
     {label:"Approved",value:paymentCounts.Approved,tone:"blue"},
@@ -106,15 +111,15 @@ function Overview({go,blocks,isManager,viewerName,ownUnitCount,contractors=[],wo
   ]} emptyLabel="No contractor payment data yet" onClick={()=>go("maintenance")}/>
  </div>:<div className="clean-overview-grid"><section className="panel"><div className="panel-head"><div><p className="eyebrow">YOUR PORTFOLIO</p><h2>Blocks at a glance</h2></div><button onClick={()=>go("buildings")}>View blocks</button></div><div className="clean-block-preview">{blocks.slice(0,5).map(b=><button key={b.id} onClick={()=>go("buildings")}><b>{b.name}</b><span>{b.address.replace(/\n/g,", ")}</span><strong>{b.units} units</strong></button>)}</div></section></div>}</>
 }
-function PieSummary({title,subtitle,segments,emptyLabel,onClick}:{title:string;subtitle:string;segments:{label:string;value:number;tone:"green"|"amber"|"blue"|"red"}[];emptyLabel:string;onClick?:()=>void}){
+function PieSummary({title,subtitle,segments,emptyLabel,onClick,unitLabel="records"}:{unitLabel?:string;title:string;subtitle:string;segments:{label:string;value:number;tone:"green"|"amber"|"blue"|"red"}[];emptyLabel:string;onClick?:()=>void}){
  const total=segments.reduce((sum,s)=>sum+s.value,0);
  let offset=0;
  const toneColor:{[key:string]:string}={green:"#5f7d67",amber:"#c99a2e",blue:"#6e665b",red:"#a94d46"};
  const gradient=total?segments.filter(s=>s.value>0).map(s=>{const start=(offset/total)*100;offset+=s.value;const end=(offset/total)*100;return `${toneColor[s.tone]} ${start}% ${end}%`;}).join(", "):"#ece6da 0 100%";
  return <section className={`panel overview-pie-card ${onClick?"clickable":""}`} onClick={onClick} role={onClick?"button":undefined} tabIndex={onClick?0:undefined} onKeyDown={e=>{if(onClick&&(e.key==="Enter"||e.key===" ")){e.preventDefault();onClick();}}}>
   <div className="panel-head"><div><p className="eyebrow">{title.toUpperCase()}</p><h2>{subtitle}</h2></div></div>
-  <div className="pie-summary-body"><div className="pie-ring" style={{background:`conic-gradient(${gradient})`}}><div><strong>{total}</strong><span>{total?"records":"No data"}</span></div></div>
-  <div className="pie-legend">{total?segments.map(s=><div key={s.label}><i className={`pie-dot ${s.tone}`}/><span>{s.label}</span><strong>{s.value}</strong></div>):<p>{emptyLabel}</p>}</div></div>
+  <div className="pie-summary-body"><div className="pie-ring" style={{background:`conic-gradient(${gradient})`}}><div><strong>{unitLabel==="GBP"?total.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2}):total}</strong><span>{total?unitLabel:"No data"}</span></div></div>
+  <div className="pie-legend">{total?segments.map(s=><div key={s.label}><i className={`pie-dot ${s.tone}`}/><span>{s.label}</span><strong>{unitLabel==="GBP"?s.value.toLocaleString("en-GB",{minimumFractionDigits:2,maximumFractionDigits:2}):s.value}</strong></div>):<p>{emptyLabel}</p>}</div></div>
  </section>
 }
 function DashboardChart({title,subtitle,rows}:{title:string;subtitle:string;rows:{label:string;value:number}[]}){
