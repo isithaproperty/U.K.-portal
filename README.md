@@ -18,3 +18,7 @@ Residents receive a sign-in link from the portal's login page after the managing
 ## Tenant portal
 
 Apply `supabase/tenant_portal.sql` once on the existing project. Registered residents sign in at `/tenant/login` and are directed to `/tenant`, where they see their home and report or track maintenance requests. Tenants cannot access management costs, internal work-order notes, other residents or building safety information. Managers can preview a resident from Units & residents and respond to tenant requests under Work orders. The preview is read-only. The database enforces resident assignments and manager portfolio scope. Test resident details stay in the database and are never seeded into source.
+
+## Service charges
+
+Apply `supabase/service_charges.sql` once. Management can raise charges or record payments and credits under Service charges or a building’s service charge tab, and import up to 500 CSV entries atomically. A reference identifies an entry within its unit and type; reimporting it corrects the record. Residents see only their own unit account. Balances use posted entries as of the London date; payments and credits settle the earliest due charges first. No live financial amounts are seeded.
