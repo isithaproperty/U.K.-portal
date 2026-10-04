@@ -6,6 +6,7 @@ import {useState} from "react";
 import BlockRegister from "./BlockRegister";
 import UnitRegister from "./UnitRegister";
 import ServiceChargeRegister from "./ServiceChargeRegister";
+import ServiceChargeDashboard from "./ServiceChargeDashboard";
 import {chargeSummary,type ChargeEntry} from "../lib/service-charges";
 import TenantRequestRegister from "./TenantRequestRegister";
 import type {TenantRequest} from "./tenant/TenantPortal";
@@ -23,21 +24,23 @@ const headings=["Building registration","Safety case","Fire safety","Structural 
 export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail}:{serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
  const residents=allResidents.filter(r=>!r.archivedAt);
  const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null),[selectedBlockId,setSelectedBlockId]=useState<number|null>(null);
+ const [blockInitialTab,setBlockInitialTab]=useState<"overview"|"charges">("overview");
+ const openChargeBlock=(id:number)=>{setBlockInitialTab("charges");setSelectedBlockId(id);setView("block");};
  const visibleNav=isManager?nav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
  const ownUnits=units.filter(unit=>residents.some(resident=>resident.unitId===unit.id&&resident.email===viewerEmail));
  const viewerName=isManager?viewerEmail.split("@")[0].split(/[._-]/).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(" "):residents.find(resident=>resident.email===viewerEmail)?.fullName??"Resident";
  return <main className="app-shell">
   <aside className={`sidebar ${mobile?"open":""}`}><button className="close-nav" aria-label="Close menu" onClick={()=>setMobile(false)}>×</button><div className="portfolio-switch"><span>PORTFOLIO</span><button>{isManager?"UK Residential":"My property"}</button></div><nav>{visibleNav.map(([key,label,icon])=><button key={key} className={view===key?"active":""} onClick={()=>{setView(key);setMobile(false);setQuery("")}}><i>{icon}</i>{label}</button>)}</nav><div className="side-footer"><div className="user"><span>{viewerName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{viewerName}</b><small>{isManager?"Portfolio manager":"Resident"}</small></div></div><button className="sign-out" onClick={async()=>{const {createClient}=await import("../lib/supabase/browser");await createClient().auth.signOut();window.location.href="/login";}}>Sign out</button></div></aside>
   <section className="workspace"><header><button className="menu" aria-label="Open menu" onClick={()=>setMobile(true)}>☰</button><Image className="dashboard-brand" src={dashboardLogo} alt="AVIAF Asset Management" width={180} height={70} priority/><div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>setView("buildings")} placeholder="Search your blocks and addresses…"/></div></header><div className="content">
-   {view==="overview"&&<Overview serviceCharges={serviceCharges} today={today} go={setView} blocks={blocks} isManager={isManager} viewerName={viewerName} ownUnitCount={ownUnits.length} contractors={contractors} workOrders={workOrders} buildingSafetyRecords={buildingSafetyRecords}/>}
-   {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} ownUnits={ownUnits} onOpen={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
-   {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard serviceCharges={serviceCharges} today={today} block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
+   {view==="overview"&&<><Overview serviceCharges={serviceCharges} today={today} go={setView} blocks={blocks} isManager={isManager} viewerName={viewerName} ownUnitCount={ownUnits.length} contractors={contractors} workOrders={workOrders} buildingSafetyRecords={buildingSafetyRecords}/>{isManager&&<ServiceChargeDashboard blocks={blocks} units={units} residents={residents} entries={serviceCharges} today={today} onOpenBlock={openChargeBlock}/>}</>}
+   {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} ownUnits={ownUnits} onOpen={(id)=>{setBlockInitialTab("overview");setSelectedBlockId(id);setView("block");}}/>}
+   {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard key={`${selectedBlockId}-${blockInitialTab}`} initialTab={blockInitialTab} serviceCharges={serviceCharges} today={today} block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
    {view==="units"&&isManager&&<UnitRegister key={unitBlock??0} blocks={blocks} units={units} residents={allResidents} initialBlockId={unitBlock}/>}
    {view==="golden"&&isManager&&<BuildingSafetyRegister blocks={blocks} records={buildingSafetyRecords}/>}
-   {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={allResidents}/><WorkOrderRegister blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/></>}
+   {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={allResidents}/><WorkOrderRegister blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setBlockInitialTab("overview");setSelectedBlockId(id);setView("block");}}/></>}
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={allResidents}/>}
-   {view==="finance"&&<ServiceChargeRegister residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
+   {view==="finance"&&isManager&&<><ServiceChargeDashboard blocks={blocks} units={units} residents={residents} entries={serviceCharges} today={today} onOpenBlock={openChargeBlock}/><ServiceChargeRegister residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/></>}
    {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
   </div></section></main>
 }

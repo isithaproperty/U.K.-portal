@@ -11,9 +11,9 @@ import type {Block,Unit,Resident,WorkOrder,Contractor} from "./types";
 type Tab="overview"|"workorders"|"residents"|"charges"|"safety";
 const safetyAreas=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
-export default function BlockDashboard({serviceCharges,today,block,units,residents,workOrders,contractors,onBack}:{serviceCharges:ChargeEntry[];today:string;block:Block;units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];onBack:()=>void}){
+export default function BlockDashboard({serviceCharges,today,block,units,residents,workOrders,contractors,onBack,initialTab="overview"}:{serviceCharges:ChargeEntry[];today:string;block:Block;units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];onBack:()=>void;initialTab?:Tab}){
  const router=useRouter();
- const[tab,setTab]=useState<Tab>("overview");
+ const[tab,setTab]=useState<Tab>(initialTab);
  const[deadline,setDeadline]=useState(""),[terms,setTerms]=useState(""),[expenseAccount,setExpenseAccount]=useState("");
  const[title,setTitle]=useState(""),[description,setDescription]=useState(""),[category,setCategory]=useState("General"),[priority,setPriority]=useState("Normal"),[unitId,setUnitId]=useState<number|null>(null),[residentId,setResidentId]=useState<number|null>(null),[contractorId,setContractorId]=useState<number|null>(null),[estimatedCost,setEstimatedCost]=useState(""),[notes,setNotes]=useState(""),[saving,setSaving]=useState(false),[message,setMessage]=useState(""),[deletedWorkOrders,setDeletedWorkOrders]=useState<number[]>([]);
  const blockUnits=useMemo(()=>units.filter(u=>u.blockId===block.id),[units,block.id]);
