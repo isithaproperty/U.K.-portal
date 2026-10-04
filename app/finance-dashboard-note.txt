@@ -1,0 +1,1 @@
+Admin finance test flow: Dashboard Service Charges card -> Service Charges portfolio overview -> Property Manager -> Block -> Unit/Resident account. Figures are derived from uploaded service-charge data.
