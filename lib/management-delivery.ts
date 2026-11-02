@@ -1,7 +1,7 @@
 import { contactRecipients, type ContactDraft } from "./leaseholder-planning.ts";
 
 /** Disabled transport contract only. Nothing in this module sends email. */
-export type ManagementMessageKind = "Demand" | "First reminder" | "Final reminder" | "Section20";
+export type ManagementMessageKind = "Demand" | "Credit note" | "First reminder" | "Final reminder" | "Section20";
 export type AttachmentSnapshot = { fileName: string; mediaType: "text/plain" | "application/pdf"; encoding: "utf8" | "base64"; content: string };
 export type DeliveryEnvelope = {
   idempotencyKey: string; operationId: string; kind: ManagementMessageKind;
@@ -35,7 +35,7 @@ async function digest(value: string) {
 }
 /** One address per envelope. Financial contents must be scoped to exactly one unit. */
 export async function prepareDeliveryEnvelopes(input: PrepareDeliveryInput): Promise<Readonly<DeliveryEnvelope>[]> {
-  if (!["Demand", "First reminder", "Final reminder", "Section20"].includes(input.kind)) throw new Error("Unsupported message kind.");
+  if (!["Demand", "Credit note", "First reminder", "Final reminder", "Section20"].includes(input.kind)) throw new Error("Unsupported message kind.");
   requiredText(input.operationId, "Operation identifier", 100);
   requiredText(input.subject, "Subject", 1000);
   requiredText(input.body, "Message", 100000);

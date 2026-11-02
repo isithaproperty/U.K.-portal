@@ -1,29 +1,33 @@
-/** Local-only test transport. No production credentials, database or mail provider. */
+/** Local-only test transport. Never deployed. All data and credentials are fabricated. */
 import {createServer} from 'node:http';
-const saved=new Map(),ledger=new Map();
+const saved=new Map(),ledger=new Map(),dispatches=new Map(),standing=new Map(),settlements=[],allocations=[];
 export const block={id:1,source_row:1,name:'Local Test Court',management_company:'Test Company',type:'Residential',address:'Synthetic address',units:1,manager:'London',financial_year_end:'2026-12-31',myblockman_export_enabled:false};
 export const unit={id:10,block_id:1,unit_number:'Flat 1',payment_reference:'LOCAL1'};
-export function sessionCookie(email='manager@example.invalid'){
- const b=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
- const access_token=`${b({alg:'HS256',typ:'JWT'})}.${b({sub:'00000000-0000-0000-0000-000000000001',email,role:'authenticated',aud:'authenticated',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+3600})}.synthetic-test-signature`;
- const value={access_token,refresh_token:'local-test-refresh',token_type:'bearer',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,user:{id:'00000000-0000-0000-0000-000000000001',email}};
- return `sb-127-auth-token=base64-${Buffer.from(JSON.stringify(value)).toString('base64url')}`;
-}
+const order={id:101,work_order_number:'LOCAL-WO-101',block_id:1,unit_id:10,resident_id:20,contractor_id:9,title:'Example repair',description:'Synthetic work',category:'Repairs',priority:'Normal',status:'Complete',contractor:'Example supplier',estimated_cost:100,actual_cost:100,notes:'',address_snapshot:'Example address',payment_status:'Approved',payment_approved_by:'owner@example.invalid',payment_approved_at:'2026-11-01',paid_at:null,created_by:'manager@example.invalid',created_at:'2026-11-01',updated_at:'2026-11-01'};
+const settings={noticeAddress:'Example service address',agentAddress:'Example agent address',bankName:'Example Bank',accountName:'Example Management',sortCode:'12-34-56',accountNumber:'12345678',paymentText:'Pay by the exact due date shown.'};
 const server=createServer(async(req,res)=>{
  const url=new URL(req.url,'http://127.0.0.1:5440');let tokenEmail='';try{tokenEmail=JSON.parse(Buffer.from((req.headers.authorization??'').split('.')[1],'base64url')).email;}catch{}
  const send=(data,status=200)=>{res.writeHead(status,{'content-type':'application/json'});res.end(JSON.stringify(data));};
  if(url.pathname==='/auth/v1/user'){if(!tokenEmail)return send({message:'Not signed in'},401);return send({id:'00000000-0000-0000-0000-000000000001',aud:'authenticated',role:'authenticated',email:tokenEmail,email_confirmed_at:'2026-01-01',app_metadata:{},user_metadata:{},identities:[],created_at:'2026-01-01'});}
+ if(url.pathname==='/test/state')return send({saved:[...saved],ledger:[...ledger],dispatches:[...dispatches],settlements,allocations,standing:[...standing],order});
  if(url.pathname.startsWith('/rest/v1/rpc/')){
   let raw='';for await(const part of req)raw+=part;const body=JSON.parse(raw);
-  if(url.pathname.endsWith('save_management_review')){const key=`${body.p_block_id}:${body.p_area}`,previous=saved.get(key);if((previous?.revision??0)!==body.p_expected_revision)return send({code:'40001',message:'Revision conflict'},409);const next={state:body.p_state,revision:body.p_expected_revision+1,updated_at:new Date().toISOString()};saved.set(key,next);return send([next]);}
+  if(url.pathname.endsWith('save_management_review')){const key=`${body.p_block_id}:${body.p_area}`,previous=saved.get(key);if((previous?.revision??0)!==body.p_expected_revision)return send({code:'40001',message:'Revision conflict'},409);const next={block_id:body.p_block_id,area:body.p_area,state:body.p_state,revision:body.p_expected_revision+1,updated_at:new Date().toISOString()};saved.set(key,next);return send([next]);}
   if(url.pathname.endsWith('post_saved_management_batch')){const batch=saved.get(`${body.p_block_id}:financials`);if(!batch||batch.revision!==body.p_expected_revision||batch.state.prepared.input.batchId!==body.p_batch_id)return send({code:'40001',message:'Batch changed'},409);for(const row of body.p_rows){const existing=ledger.get(row.request_id);if(existing&&JSON.stringify(existing.row)!==JSON.stringify(row))return send({code:'P0001',message:'Conflicting replay'},400);if(!existing)ledger.set(row.request_id,{row,reference:`LOCAL-INV-${ledger.size+1}`});}return send(body.p_rows.length);}
+  if(url.pathname.endsWith('queue_management_dispatches')){for(const row of body.p_rows){if(!dispatches.has(row.idempotency_key))dispatches.set(row.idempotency_key,{...row,status:'Pending',sent_at:null,delivery_status:'Not established',approved_by:body.p_actor});}return send(body.p_rows.length);}
+  if(url.pathname.endsWith('save_standing_order')){const key=`${body.p_block_id}:${body.p_config.unitId}`,previous=standing.get(key);if((previous?.revision??0)!==body.p_revision)return send({code:'40001',message:'Conflict'},409);const c=body.p_config,next={id:standing.size+1,block_id:body.p_block_id,unit_id:c.unitId,amount_pence:c.amountPence,start_date:c.startDate,cadence:c.cadence,due_offset_days:c.dueOffsetDays,invoice_mode:c.invoiceMode,allocation_mode:c.allocationMode,enabled:c.enabled,lease_confirmed:c.leaseConfirmed,lease_reference:c.leaseReference,revision:body.p_revision+1};standing.set(key,next);return send(next);}
+  if(url.pathname.endsWith('record_supplier_settlement')){const r=body.p_request;if(settlements.some(s=>s.id===r.requestId))return send({replayed:true,settlementId:r.requestId});const s={id:r.requestId,block_id:body.p_block_id,bank_transaction_id:r.bankTransactionId,payment_date:r.paymentDate,amount_pence:r.amountPence,evidence:r.evidence,recorded_by:tokenEmail,recorded_at:new Date().toISOString()};settlements.push(s);for(const a of r.allocations)allocations.push({settlement_id:r.requestId,block_id:body.p_block_id,invoice_id:a.invoiceId,work_order_id:101,amount_pence:a.amountPence});if(allocations.reduce((n,a)=>n+a.amount_pence,0)>=10000){order.payment_status='Paid';order.paid_at=new Date().toISOString();}return send({replayed:false,settlementId:r.requestId,workOrderIds:[101]});}
  }
  const table=url.pathname.split('/').pop();let rows=[];
  if(table==='portal_members')rows=[{email:tokenEmail,role:tokenEmail.startsWith('tenant')?'resident':tokenEmail.startsWith('owner')?'owner':'manager',portfolio_manager:tokenEmail.startsWith('other')?'Other':'London'}];
- if(table==='blocks')rows=[block];if(table==='units')rows=[unit];
+ if(table==='blocks')rows=[block];if(table==='units')rows=[unit];if(table==='work_orders')rows=[order];
+ if(table==='contractors')rows=[{id:9,company_name:'Example supplier',trade:'Repairs',status:'Approved',expiry_pause_reason:'',notes:'',created_at:'2026-01-01',updated_at:'2026-01-01'}];
  if(table==='residents')rows=[{id:20,unit_id:10,block_id:1,full_name:'Example contact',email:'owner@example.invalid',phone:null,archived_at:null}];
- if(table==='management_review_state'){const area=(url.searchParams.get('area')??'').replace('eq.','');const found=saved.get(`1:${area}`);rows=found?[found]:[];}
- if(table==='service_charge_entries')rows=[...ledger.values()].map(x=>({reference:x.reference}));
+ if(table==='management_review_state')rows=[...saved.values()];
+ if(table==='management_dispatches')rows=[...dispatches.values()];if(table==='supplier_settlements')rows=settlements;if(table==='supplier_settlement_allocations')rows=allocations;if(table==='standing_orders')rows=[...standing.values()];
+ if(table==='service_charge_entries')rows=[...ledger.values()].map((x,i)=>({...x.row,id:i+1,block_id:1,unit_id:10,request_id:x.row.request_id,amount_pence:x.row.amount_pence,reference:x.reference,due_date:x.row.due_date||null}));
+ if(table==='service_charge_document_settings')rows=[{block_id:1,settings}];
+ for(const [key,value] of url.searchParams){if(value.startsWith('eq.'))rows=rows.filter(row=>String(row[key])===value.slice(3));else if(value.startsWith('in.(')){const values=value.slice(4,-1).split(',').map(s=>s.replaceAll('"',''));rows=rows.filter(row=>values.includes(String(row[key])));}}
  const object=(req.headers.accept??'').includes('object+json');send(object?(rows[0]??null):rows);
 });
 server.listen(5440,'127.0.0.1',()=>console.log('Local test Supabase transport ready on 5440'));

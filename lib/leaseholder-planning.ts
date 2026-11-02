@@ -29,7 +29,22 @@ export type ConsultationDraft={
  stage:"Notice of intention"|"Statement of estimates / proposals";
  noticeDate:string;serviceDate:string;serviceMethod:string;basisDate:string;basisReason:string;
  confirmed:boolean;subject:string;message:string;recipients:RecipientSnapshot[];
+ coverage?:ConsultationCoverage;
 };
+export type ConsultationCoverage={reviewed:boolean;requiredUnitIds:number[];postalRecipients:{unitId:number|null;name:string;address:string;serviceMethod:string}[];associationReview:string;coverageReference:string;electronicServiceConfirmed:boolean;servicePermissionReference:string;legalTemplateApproved:boolean;legalApprovalReference:string};
+export function assertConsultationDispatchReady(draft:ConsultationDraft,contacts:ContactDraft[],blockId:number){
+ if(draft.blockId!==blockId||draft.confirmed)throw new Error("Only an unsent notice in the selected block can be queued. Served notices are not resent automatically.");
+ if(!draft.title.trim()||!draft.route.trim()||!draft.applicability.trim()||!draft.subject.trim()||!draft.message.trim())throw new Error("Complete the consultation route and exact notice wording before dispatch review.");
+ const coverage=draft.coverage;
+ if(!coverage?.reviewed||!coverage.requiredUnitIds.length||!coverage.coverageReference.trim()||!coverage.associationReview.trim())throw new Error("Review all required leaseholders, postal recipients and recognised associations before queuing this notice.");
+ if(!coverage.legalTemplateApproved||!coverage.legalApprovalReference.trim())throw new Error("Notice wording and template need recorded legal approval before dispatch.");
+ if(!coverage.electronicServiceConfirmed||!coverage.servicePermissionReference.trim())throw new Error("Record permitted electronic service and supporting evidence for every email recipient.");
+ const eligible=contactRecipients(contacts,blockId,"Section 20"),eligibleKeys=new Set(eligible.map(r=>`${r.contactId}/${r.email}`));
+ if(!draft.recipients.length||draft.recipients.length!==eligibleKeys.size||draft.recipients.some(r=>!eligibleKeys.has(`${r.contactId}/${r.email}`)))throw new Error("Notice recipient snapshot differs from eligible contacts; review the notice again.");
+ for(const unitId of coverage.requiredUnitIds){if(!contacts.some(c=>c.blockId===blockId&&c.unitId===unitId&&c.role==="Leaseholder"&&c.emails.some(email=>draft.recipients.some(r=>r.email===email)))&&!coverage.postalRecipients.some(r=>r.unitId===unitId))throw new Error("Every required leaseholder unit needs a reviewed email or postal recipient.");}
+ if(coverage.postalRecipients.some(r=>!r.name.trim()||!r.address.trim()||!r.serviceMethod.trim()))throw new Error("Complete all non-email service instructions.");
+ return {emailRecipients:draft.recipients,postalRecipients:coverage.postalRecipients};
+}
 function validDate(value:string){return /^\d{4}-\d{2}-\d{2}$/.test(value)&&!Number.isNaN(Date.parse(`${value}T12:00:00Z`))&&new Date(`${value}T12:00:00Z`).toISOString().slice(0,10)===value;}
 export function consultationReview(draft:ConsultationDraft,today:string){
  if(!validDate(today))throw new Error("A valid review date is required.");
@@ -76,6 +91,7 @@ export function validateLeaseholderState(value:unknown,blockId:number,unitIds:re
    recipientEmails.add(email);return {contactId,email,unitId,name:text(r.name,200)};
   });
   const draft:ConsultationDraft={id,blockId,stage,title:text(c.title,300),route:text(c.route,300),applicability:text(c.applicability,10000),noticeDate:optionalText(c.noticeDate,10),serviceDate:optionalText(c.serviceDate,10),serviceMethod:optionalText(c.serviceMethod,500),basisDate:optionalText(c.basisDate,10),basisReason:optionalText(c.basisReason,10000),confirmed:flag(c.confirmed),subject:text(c.subject,300),message:text(c.message,30000),recipients};
+  if(c.coverage!==undefined){const cv=object(c.coverage),requiredUnitIds=records(cv.requiredUnitIds,1000).map(v=>unit(v) as number);if(new Set(requiredUnitIds).size!==requiredUnitIds.length)throw new Error("Duplicate required leaseholder units.");draft.coverage={reviewed:flag(cv.reviewed),requiredUnitIds,postalRecipients:records(cv.postalRecipients,1000).map(v=>{const r=object(v);return {unitId:unit(r.unitId,true),name:text(r.name,200),address:text(r.address,1000),serviceMethod:text(r.serviceMethod,300)};}),associationReview:optionalText(cv.associationReview,3000),coverageReference:optionalText(cv.coverageReference,3000),electronicServiceConfirmed:flag(cv.electronicServiceConfirmed),servicePermissionReference:optionalText(cv.servicePermissionReference,3000),legalTemplateApproved:flag(cv.legalTemplateApproved),legalApprovalReference:optionalText(cv.legalApprovalReference,3000)};}
   consultationReview(draft,today);return draft;
  });
  return {contacts,consultations};

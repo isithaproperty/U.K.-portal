@@ -46,6 +46,6 @@ Successful communications are copied to the exact resident assignments captured 
 
 ## Management workflow review branch
 
-The manager sidebar includes **Management review** for saved lease budgets, financial batch preparation, contacts/Section 20 records, debtor notes/reminder snapshots and supplier invoices/payment allocation records. The new persistence requires the reviewed `supabase/management_review.sql` script; it is not applied automatically. Bulk ledger posting defaults to disabled and requires a separate explicit activation. Email dispatch and background jobs are not connected.
+The manager sidebar includes Management review for lease budgets, approved financial batches and documents, multi-email contacts/Section 20, debtor reminders and sent history, supplier settlements, standing orders and scheduled delivery. Normal Communications consumes saved contacts; work orders link to verified settlements; overview shows manager review alerts.
 
-See [the feature matrix and verification report](docs/management-review.md) for implemented behavior, outstanding integrations and safe local preview/test setup. Production is unchanged until reviewed deployment and schema activation.
+Persistence requires reviewed SQL scripts. Bulk posting, provider delivery and background jobs require separate explicit activation and are not enabled by this branch alone. See [the full checklist, activation dependencies and verification report](docs/management-review.md). No production changes were made during development.

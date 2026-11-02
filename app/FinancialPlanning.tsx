@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useRef,useState} from "react";
 import type {Block,Unit,Resident} from "./types";
+import {generateFinancialDocuments,type FinancialDocumentSnapshot} from "../lib/management-documents";
 import {money,type ChargeEntry} from "../lib/service-charges";
 import {parsePounds,planningPeriods,prepareFinancialDraft,type DemandFrequency,validateFinancialState,type FinancialDraftInput,type FinancialDraftRow,type FinancialPlanningState} from "../lib/financial-planning";
 
@@ -20,13 +21,16 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
  const [revision,setRevision]=useState(0),[loading,setLoading]=useState(false),[saving,setSaving]=useState(false),[persistenceReady,setPersistenceReady]=useState(false),[conflict,setConflict]=useState(false),[storageStatus,setStorageStatus]=useState(""),[reload,setReload]=useState(0);
  const saveLock=useRef(false);
  const postLock=useRef(false);
+ const documentGeneration=useRef(0);
+ const [documents,setDocuments]=useState<readonly Readonly<FinancialDocumentSnapshot>[]>([]),[documentUnit,setDocumentUnit]=useState<number|null>(null),[generatingDocuments,setGeneratingDocuments]=useState(false);
  const [posting,setPosting]=useState(false),[savedBatchId,setSavedBatchId]=useState<string|null>(null),[postedBatchId,setPostedBatchId]=useState<string|null>(null);
  const selectedUnits=useMemo(()=>units.filter(unit=>unit.blockId===blockId),[units,blockId]);
  const periods=useMemo(()=>{try{return planningPeriods(yearStart,frequency);}catch{return [];}},[yearStart,frequency]);
  function applyState(state:FinancialPlanningState){setKind(state.kind);setSchedules(state.schedules);setFrequency(state.frequency);setYearStart(state.yearStart);setPeriodIndex(state.periodIndex);setIssueMode(state.issueMode);setIssueDate(state.issueDate);setDueDate(state.dueDate);setPrepared(state.prepared);setLeaseConfirmed(false);}
  useEffect(()=>{
   const controller=new AbortController();
-  setPersistenceReady(false);setRevision(0);setConflict(false);setSavedBatchId(null);setPostedBatchId(null);setError("");setLeaseConfirmed(false);setPrepared(null);
+  documentGeneration.current++;setGeneratingDocuments(false);
+  setDocuments([]);setDocumentUnit(null);setPersistenceReady(false);setRevision(0);setConflict(false);setSavedBatchId(null);setPostedBatchId(null);setError("");setLeaseConfirmed(false);setPrepared(null);
   setKind("Demand");setSchedules([{id:"schedule-1",name:"",amount:"",percentages:{}}]);setFrequency("Annual");setYearStart(today);setPeriodIndex(0);setIssueMode("Issue now, future due date");setIssueDate(today);setDueDate(today);
   if(reviewOnly||!blockId){setLoading(false);setStorageStatus(reviewOnly?"Preview only: saving is disabled.":"");return ()=>controller.abort();}
   setLoading(true);setStorageStatus("Loading saved financial preparation…");
@@ -52,7 +56,7 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
    if(response.status===409){setConflict(true);throw new Error("Another manager has saved changes. Export your prepared batch if needed, then reload the saved version before saving again.");}
    if(!response.ok)throw new Error(result.error||"Financial preparation was not saved.");
    if(!Number.isInteger(result.revision)||result.revision<=revision)throw new Error("Save outcome could not be verified. Reload the saved version before trying again.");
-   setRevision(result.revision);setSavedBatchId(prepared?.input.batchId??null);setStorageStatus(`Budget and prepared batch saved (revision ${result.revision}). No ledger entries or emails were created.`);
+   setDocuments([]);setRevision(result.revision);setSavedBatchId(prepared?.input.batchId??null);setStorageStatus(`Budget and prepared batch saved (revision ${result.revision}). No ledger entries or emails were created.`);
   }catch(cause){setStorageStatus(cause instanceof Error?cause.message:"Financial preparation was not saved.");}
   finally{saveLock.current=false;setSaving(false);}
  }
@@ -71,7 +75,7 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
   }catch(cause){setStorageStatus(cause instanceof Error?cause.message:"Ledger outcome could not be confirmed. Keep this saved batch identifier when checking or retrying.");}
   finally{postLock.current=false;setPosting(false);}
  }
- function invalidate(){setPrepared(null);setError("");setLeaseConfirmed(false);setStorageStatus(reviewOnly?"Preview only: saving is disabled.":"Unsaved changes. Save explicitly to keep this preparation.");}
+ function invalidate(){setDocuments([]);setPrepared(null);setError("");setLeaseConfirmed(false);setStorageStatus(reviewOnly?"Preview only: saving is disabled.":"Unsaved changes. Save explicitly to keep this preparation.");}
  function changeSchedule(id:string,patch:Partial<ScheduleForm>){invalidate();setSchedules(current=>current.map(schedule=>schedule.id===id?{...schedule,...patch}:schedule));}
  function prepare(){
   try{
@@ -80,8 +84,35 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
    const input:FinancialDraftInput={batchId:crypto.randomUUID(),blockId,kind,preparedDate:today,issueDate,dueDate,issueMode,frequency,yearStart,periodIndex,schedules:schedules.map(schedule=>({id:schedule.id,name:schedule.name,annualPence:parsePounds(schedule.amount),shares:selectedUnits.map(unit=>({unitId:unit.id,percentage:schedule.percentages[unit.id]??""}))}))};
    const rows=prepareFinancialDraft(input);
    if(!rows.length)throw new Error("This period has no non-zero allocations. Review the budget and period.");
-   setPrepared({input,rows});setError("");setStorageStatus(reviewOnly?"Preview batch prepared; saving is disabled.":"Batch prepared. Save explicitly to retain it with this budget.");
+   setDocuments([]);setPrepared({input,rows});setError("");setStorageStatus(reviewOnly?"Preview batch prepared; saving is disabled.":"Batch prepared. Save explicitly to retain it with this budget.");
   }catch(cause){setPrepared(null);setError(cause instanceof Error?cause.message:"Could not prepare this batch.");}
+ }
+ async function previewDocuments(){
+  if(!prepared||generatingDocuments)return;
+  const generation=++documentGeneration.current;
+  setGeneratingDocuments(true);setError("");setDocuments([]);
+  try{
+   let result:readonly Readonly<FinancialDocumentSnapshot>[];
+   if(reviewOnly){
+    const state=validateFinancialState({version:1,blockId,kind,schedules,frequency,yearStart,periodIndex,issueMode,issueDate,dueDate,prepared},blockId,selectedUnits.map(unit=>unit.id),today);
+    const block=blocks.find(item=>item.id===blockId);if(!block)throw new Error("Select a block.");
+    result=await generateFinancialDocuments({state,revision:1,today,mode:"Draft",block,units:selectedUnits,settings:block.documentSettings});
+   }else{
+    if(savedBatchId!==prepared.input.batchId)throw new Error("Save this prepared batch before generating its documents.");
+    const response=await fetch(`/api/blocks/${blockId}/financial-documents`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({revision,batchId:prepared.input.batchId,mode:"Draft"})});const data=await response.json();
+    if(response.status===409)setConflict(true);
+    if(!response.ok)throw new Error(data.error||"Documents could not be generated.");
+    if(!Array.isArray(data.documents)||!data.documents.length)throw new Error("No document snapshots were returned.");
+    result=data.documents;
+   }
+   if(generation!==documentGeneration.current)return;
+   setDocuments(result);setDocumentUnit(result[0].unitId);
+  }catch(cause){if(generation===documentGeneration.current)setError(cause instanceof Error?cause.message:"Documents could not be generated.");}
+  finally{if(generation===documentGeneration.current)setGeneratingDocuments(false);}
+ }
+ function downloadDocument(snapshot:Readonly<FinancialDocumentSnapshot>,format:"html"|"text"){
+  const url=URL.createObjectURL(new Blob([format==="html"?snapshot.html:snapshot.attachment.content],{type:format==="html"?"text/html;charset=utf-8":"text/plain;charset=utf-8"}));
+  const link=document.createElement("a");link.href=url;link.download=format==="html"?snapshot.attachment.fileName.replace(/\.txt$/,".html"):snapshot.attachment.fileName;link.click();URL.revokeObjectURL(url);
  }
  function download(){
   if(!prepared)return;
@@ -92,9 +123,9 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
  return <section className="panel tenant-card tenant-form">
   <div className="panel-head"><div><p className="eyebrow">FINANCIAL PREPARATION · REVIEW VERSION</p><h2>Lease budgets & bulk batches</h2></div></div>
   <p>Prepare lease schedule allocations and a bulk demand or surplus credit batch. Save the budget and prepared batch explicitly to retain them for this block; unsaved changes are lost when leaving or refreshing. Ledger posting requires an explicitly approved saved batch and enabled posting access. No email sending or automatic scheduling is activated here.</p>
-  <div><button className="unit-secondary" disabled={reviewOnly||loading||saving||posting||!persistenceReady||conflict} onClick={()=>void savePreparation()}>{saving?"Saving…":"Save budget & prepared batch"}</button> <button className="unit-secondary" disabled={reviewOnly||loading||saving||posting||!blockId} onClick={()=>{if(confirm("Reload the saved financial preparation? Unsaved changes will be discarded."))setReload(current=>current+1);}}>Reload saved version</button></div>
+  <div><button className="unit-secondary" disabled={reviewOnly||loading||saving||posting||generatingDocuments||!persistenceReady||conflict} onClick={()=>void savePreparation()}>{saving?"Saving…":"Save budget & prepared batch"}</button> <button className="unit-secondary" disabled={reviewOnly||loading||saving||posting||generatingDocuments||!blockId} onClick={()=>{if(confirm("Reload the saved financial preparation? Unsaved changes will be discarded."))setReload(current=>current+1);}}>Reload saved version</button></div>
   {storageStatus&&<p className="unit-message" role="status">{storageStatus}</p>}
-  <fieldset disabled={loading||saving||posting} style={{border:0,padding:0,margin:0,minWidth:0}}>
+  <fieldset disabled={loading||saving||posting||generatingDocuments} style={{border:0,padding:0,margin:0,minWidth:0}}>
   <div className="unit-select">
    <label>Block<select value={blockId} onChange={event=>{invalidate();setBlockId(Number(event.target.value));setSchedules([{id:"schedule-1",name:"",amount:"",percentages:{}}]);}}>{blocks.map(block=><option key={block.id} value={block.id}>{block.name}</option>)}</select></label>
    <label>Batch type<select value={kind} onChange={event=>{invalidate();setKind(event.target.value as typeof kind);}}><option>Demand</option><option>Surplus credit</option></select></label>
@@ -121,6 +152,8 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
   {prepared&&<section aria-live="polite"><h3>Prepared batch · {prepared.rows.length} allocations · {money(prepared.rows.reduce((sum,row)=>sum+row.amountPence,0))}</h3><p>Batch ID: {prepared.input.batchId}. Repeated exports retain the same batch and row identifiers. A future posting or delivery integration must enforce these keys atomically before this can be activated.</p><div className="block-table-wrap"><table><caption>Draft allocations for manager review</caption><thead><tr><th>Unit</th><th>Schedule</th><th>Type</th><th>Amount</th><th>Period</th><th>Planned issue</th><th>Due</th></tr></thead><tbody>{prepared.rows.map(row=><tr key={row.idempotencyKey}><td>{selectedUnits.find(unit=>unit.id===row.unitId)?.unitNumber}</td><td>{row.scheduleName}</td><td>{row.entryType}</td><td>{money(row.amountPence)}</td><td>{row.chargePeriod?`${row.chargePeriod.start} – ${row.chargePeriod.end}`:"Surplus allocation"}</td><td>{row.plannedIssueDate}</td><td>{row.dueDate??"—"}</td></tr>)}</tbody></table></div><button className="unit-secondary" onClick={download}>Export review batch (JSON)</button>
    <p>{!canPost||reviewOnly?"Ledger posting is disabled in this review. The prepared batch can be saved or exported for approval.":savedBatchId!==prepared.input.batchId?"Save this prepared batch before posting to the ledger.":postedBatchId===prepared.input.batchId?"This batch has been confirmed in the ledger. No email was sent.":"Posting records real charges or credits. Review the saved amounts and dates before confirming."}</p>
    <button className="primary" disabled={!canPost||reviewOnly||loading||saving||posting||!persistenceReady||conflict||savedBatchId!==prepared.input.batchId||postedBatchId===prepared.input.batchId} onClick={()=>void postApprovedBatch()}>{posting?"Posting…":"Post approved batch to ledger"}</button>
+   <button className="unit-secondary" disabled={generatingDocuments||(!reviewOnly&&savedBatchId!==prepared.input.batchId)} onClick={()=>void previewDocuments()}>{generatingDocuments?"Generating document snapshots…":"Preview demand / credit documents"}</button>
+   {documents.length>0&&<section><h3>Document snapshots — draft preview</h3><p>Documents use this saved batch and verified ledger references where available. Generating or downloading them does not send an email or establish service. Download HTML and use your browser’s Print / Save PDF command for a PDF copy. The exact text snapshot is suitable for an email attachment.</p><label>Unit document<select value={documentUnit??""} onChange={event=>setDocumentUnit(Number(event.target.value))}>{documents.map(document=><option key={document.documentId} value={document.unitId}>{selectedUnits.find(unit=>unit.id===document.unitId)?.unitNumber??document.unitId}</option>)}</select></label>{documents.filter(document=>document.unitId===documentUnit).map(document=><article key={document.documentId}><p>{document.posted?"Matching ledger references verified.":"No complete matching ledger posting verified."} {document.missingRequirements.length?`Formal issue is blocked: ${document.missingRequirements.join("; ")}.`:"Formal issue still requires separate manager approval and dispatch."}</p><p>Snapshot SHA-256: {document.contentHash}</p><button className="unit-secondary" onClick={()=>downloadDocument(document,"html")}>Download HTML / print to PDF</button> <button className="unit-secondary" onClick={()=>downloadDocument(document,"text")}>Download exact text attachment</button><iframe sandbox="" title={`Draft ${document.kind} for unit ${document.unitId}`} srcDoc={document.html} style={{width:"100%",height:620,border:"1px solid #d7d1c7",marginTop:16}}/></article>)}</section>}
   </section>}
  </fieldset></section>;
 }

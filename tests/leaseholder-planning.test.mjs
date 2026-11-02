@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {parseContactEmails,contactRecipients,consultationReview,validateLeaseholderState} from "../lib/leaseholder-planning.ts";
+import {parseContactEmails,contactRecipients,consultationReview,validateLeaseholderState,assertConsultationDispatchReady} from "../lib/leaseholder-planning.ts";
 const owner={id:"1",blockId:1,unitId:1,name:"Owner",role:"Leaseholder",emails:["OWNER@example.com","joint@example.com"],communications:true,demands:true};
 const tenant={...owner,id:"2",name:"Tenant",role:"Tenant",emails:["tenant@example.com"],demands:true};
 test("multiple emails are normalised, deduplicated, and validated",()=>{
@@ -51,4 +51,25 @@ test("persistence rejects cross-block records, foreign units, unclassified roles
 test("saved consultation snapshots cannot add tenants, foreign units or absent contacts",()=>{
  for(const patch of [{blockId:2},{stage:"Complete"},{recipients:[{...draft.recipients[0],unitId:99}]},{recipients:[{...draft.recipients[0],contactId:"unknown"}]},{recipients:[draft.recipients[0],draft.recipients[0]]}])assert.throws(()=>validateLeaseholderState({contacts:[normalOwner],consultations:[{...draft,...patch}]},1,[1],"2026-11-01"));
  assert.throws(()=>validateLeaseholderState({contacts:[{...normalOwner,role:"Tenant",demands:false}],consultations:[draft]},1,[1],"2026-11-01"));
+});
+const approvedCoverage={reviewed:true,requiredUnitIds:[1],postalRecipients:[],associationReview:"No recognised association, register checked",coverageReference:"Leaseholder register reviewed",electronicServiceConfirmed:true,servicePermissionReference:"Consents checked",legalTemplateApproved:true,legalApprovalReference:"Solicitor approved exact wording v1"};
+test("Section20 queue requires explicit legal approval, electronic permission and full recipient coverage",()=>{
+ const pending={...draft,confirmed:false,coverage:approvedCoverage};
+ assert.equal(assertConsultationDispatchReady(pending,[normalOwner],1).emailRecipients.length,2);
+ assert.throws(()=>assertConsultationDispatchReady({...pending,confirmed:true},[normalOwner],1));
+ assert.throws(()=>assertConsultationDispatchReady({...pending,coverage:undefined},[normalOwner],1));
+ for(const patch of [{reviewed:false},{requiredUnitIds:[]},{requiredUnitIds:[1,2]},{legalTemplateApproved:false},{legalApprovalReference:""},{electronicServiceConfirmed:false},{servicePermissionReference:""},{associationReview:""}])assert.throws(()=>assertConsultationDispatchReady({...pending,coverage:{...approvedCoverage,...patch}},[normalOwner],1));
+});
+test("Section20 accepts recorded postal coverage without implying that email completed postal service",()=>{
+ const postal={unitId:2,name:"Postal owner",address:"Example postal address",serviceMethod:"Reviewed postal service method"};
+ const pending={...draft,confirmed:false,coverage:{...approvedCoverage,requiredUnitIds:[1,2],postalRecipients:[postal]}};
+ assert.deepEqual(assertConsultationDispatchReady(pending,[normalOwner],1).postalRecipients,[postal]);
+ const saved=validateLeaseholderState({contacts:[normalOwner],consultations:[pending]},1,[1,2],"2026-11-01");assert.equal(saved.consultations[0].coverage.postalRecipients.length,1);
+ assert.throws(()=>validateLeaseholderState({contacts:[normalOwner],consultations:[pending]},1,[1],"2026-11-01"));
+});
+test("Section20 snapshots must be reviewed again when eligible contacts change",()=>{
+ const pending={...draft,confirmed:false,coverage:approvedCoverage};
+ assert.throws(()=>assertConsultationDispatchReady(pending,[normalOwner,{...normalOwner,id:"new",emails:["additional@example.com"]}],1));
+ assert.throws(()=>assertConsultationDispatchReady(pending,[{...normalOwner,role:"Tenant",demands:false}],1));
+ assert.throws(()=>assertConsultationDispatchReady(pending,[normalOwner],2));
 });
