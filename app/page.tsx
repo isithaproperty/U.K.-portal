@@ -1,3 +1,5 @@
+import ReviewPage from "./review/page";
+import {isHostedReviewPreview} from "../lib/review-access";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
 import Portal from "./Portal";
@@ -6,6 +8,7 @@ import type { Block, Unit, Resident, WorkOrder, Contractor, ContractorDocument, 
 
 export const dynamic = "force-dynamic";
 export default async function Home() {
+  if(isHostedReviewPreview(process.env.VERCEL_ENV,process.env.VERCEL_GIT_COMMIT_REF)) return <ReviewPage/>;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) redirect("/login");

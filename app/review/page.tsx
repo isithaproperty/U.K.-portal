@@ -5,7 +5,7 @@ import type {Block,Unit,Resident,WorkOrder,Contractor} from "../types";
 import type {ChargeEntry} from "../../lib/service-charges";
 export const dynamic="force-dynamic";
 export default function ReviewPage(){
- if(!canViewSyntheticReview(process.env.NODE_ENV,process.env.LONDON_REVIEW_MODE)) notFound();
+ if(!canViewSyntheticReview(process.env.NODE_ENV,process.env.LONDON_REVIEW_MODE,process.env.VERCEL_ENV,process.env.VERCEL_GIT_COMMIT_REF)) notFound();
  const blocks:Block[]=[{id:900001,name:"Example Court — synthetic",managementCompany:"Example Court Management Ltd",type:"Residential",address:"Example address, London",units:3,manager:"Demo manager",financialYearEnd:"31 December",myBlockManExportEnabled:false}];
  const units:Unit[]=[1,2,3].map(n=>({id:900010+n,blockId:900001,unitNumber:`Flat ${n}`,paymentReference:`DEMO${n}`}));
  const residents:Resident[]=units.map((unit,i)=>({id:900020+i,unitId:unit.id,blockId:unit.blockId,fullName:`Example leaseholder ${i+1}`,email:`leaseholder${i+1}@example.invalid`,phone:null}));
