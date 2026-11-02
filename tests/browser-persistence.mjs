@@ -1,0 +1,27 @@
+/** Chromium CDP integration check. See docs/management-review.md for local-only setup. */
+import assert from 'node:assert/strict';
+import {writeFile} from 'node:fs/promises';
+const [target]=(await (await fetch('http://127.0.0.1:9222/json/list')).json());
+const socket=new WebSocket(target.webSocketDebuggerUrl); await new Promise(resolve=>socket.addEventListener('open',resolve,{once:true}));
+let id=0;const pending=new Map(),errors=[],requests=[];
+socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id){const p=pending.get(message.id);pending.delete(message.id);message.error?p.reject(message.error):p.resolve(message.result);}else if(message.method==='Runtime.exceptionThrown')errors.push(message.params.exceptionDetails);else if(message.method==='Network.requestWillBeSent')requests.push(message.params.request);});
+function call(method,params={}){return new Promise((resolve,reject)=>{const key=++id;pending.set(key,{resolve,reject});socket.send(JSON.stringify({id:key,method,params}));});}
+async function evaluate(expression){const result=await call('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(JSON.stringify(result.exceptionDetails));return result.result.value;}
+async function waitFor(expression){for(let i=0;i<100;i++){if(await evaluate(expression))return;await new Promise(r=>setTimeout(r,100));}throw new Error('Timed out: '+expression);}
+async function button(text){await waitFor(`[...document.querySelectorAll('button')].some(b=>b.textContent.trim()===${JSON.stringify(text)})`);await evaluate(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)});if(!b)throw Error('Missing button'); b.click()})()`);await new Promise(r=>setTimeout(r,100));}
+async function setLabel(label,value){await evaluate(`(()=>{const l=[...document.querySelectorAll('label')].find(l=>l.textContent.trim().startsWith(${JSON.stringify(label)}));if(!l)throw Error('Missing label '+${JSON.stringify(label)}); const el=l.querySelector('input,textarea,select');const proto=el.tagName==='SELECT'?HTMLSelectElement.prototype:el.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(value)});el.dispatchEvent(new Event(el.tagName==='SELECT'?'change':'input',{bubbles:true}));})()`);await new Promise(r=>setTimeout(r,75));}
+
+await call('Runtime.enable');await call('Network.enable');await call('Page.enable');
+const accountNote='Browser persisted account note '+Date.now();
+const b=x=>Buffer.from(JSON.stringify(x)).toString('base64url');const email='manager@example.invalid';
+const token=`${b({alg:'HS256',typ:'JWT'})}.${b({sub:'00000000-0000-0000-0000-000000000001',email,role:'authenticated',aud:'authenticated',iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+3600})}.synthetic-test-signature`;
+await call('Network.setCookie',{url:'http://127.0.0.1:3010',name:'sb-127-auth-token',value:'base64-'+b({access_token:token,refresh_token:'test',expires_at:Math.floor(Date.now()/1000)+3600,expires_in:3600,token_type:'bearer',user:{id:'00000000-0000-0000-0000-000000000001',email}})});
+await call('Emulation.setDeviceMetricsOverride',{width:1440,height:1080,deviceScaleFactor:1,mobile:false});
+await call('Page.navigate',{url:'http://127.0.0.1:3010/'});await waitFor(`document.body?.innerText.includes('Management review')`);await new Promise(r=>setTimeout(r,1500));
+await evaluate(`(()=>{const b=[...document.querySelectorAll('aside button')].find(b=>b.textContent.includes('Management review'));b.click()})()`);
+await waitFor(`document.body?.innerText.includes('Loaded saved preparation')`);await button('Debtors');
+await waitFor(`document.body?.innerText.includes('Saved review state')`);await setLabel('Internal account note',accountNote);await button('Save review state');await waitFor(`document.body?.innerText.includes('Account notes, reminder snapshots and standing-order review settings saved.')`);
+await call('Page.reload');await waitFor(`document.body?.innerText.includes('Management review')`);await new Promise(r=>setTimeout(r,1500));await evaluate(`(()=>{const b=[...document.querySelectorAll('aside button')].find(b=>b.textContent.includes('Management review'));b.click()})()`);await button('Debtors');await waitFor(`document.querySelector('textarea') && [...document.querySelectorAll('textarea')].some(t=>t.value.startsWith('Browser persisted account note'))`);
+await button('Leaseholders & Section 20');await waitFor(`document.body?.innerText.includes('Loaded saved revision')`);await setLabel('Contact type','Leaseholder');await setLabel('Unit','10');await setLabel('Contact name','Browser Owner');await setLabel('Email addresses','browser.owner@example.invalid, second@example.invalid');await button('Add contact draft');await button('Save block records');await waitFor(`document.body?.innerText.includes('Saved block records at revision')`);
+const desktop=(await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data;await writeFile('./docs/review-persistence.png',Buffer.from(desktop,'base64'));
+assert.equal(errors.length,0,JSON.stringify(errors));console.log('PASS: authenticated portal navigation, real Next persistence API calls against local mock, account-note save and full browser reload, multiple-email contact save; zero runtime exceptions.');socket.close();

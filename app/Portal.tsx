@@ -1,5 +1,7 @@
 "use client";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+const ManagementReview=dynamic(()=>import("./ManagementReview"));
 import dashboardLogo from "../public/aviaf-dashboard-logo.png";
 import ResidentArchiveAction from "./ResidentArchiveAction";
 import {useState} from "react";
@@ -16,11 +18,11 @@ import BuildingSafetyRegister from "./BuildingSafetyRegister";
 import CommunicationRegister from "./CommunicationRegister";
 import type {Block,Unit,Resident,WorkOrder,Contractor,ContractorDocument,BuildingSafetyRecord} from "./types";
 
-type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages";
-const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Health & Safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["messages","Communications","□"]];
+type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages"|"review";
+const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Health & Safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["messages","Communications","□"],["review","Management review","◇"]];
 const headings=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
-export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail}:{serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
+export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail,canPostBatches=false}:{canPostBatches?:boolean;serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
  const residents=allResidents.filter(r=>!r.archivedAt);
  const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null),[selectedBlockId,setSelectedBlockId]=useState<number|null>(null);
  const visibleNav=isManager?nav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
@@ -39,6 +41,7 @@ export default function Portal({serviceCharges,today,tenantRequests,blocks,units
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={allResidents}/>}
    {view==="finance"&&<ServiceChargeRegister residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
    {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
+   {view==="review"&&isManager&&<ManagementReview blocks={blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} entries={serviceCharges} today={today} canPostBatches={canPostBatches}/>}
   </div></section></main>
 }
 function Overview({serviceCharges,today,go,blocks,isManager,viewerName,ownUnitCount,contractors=[],workOrders=[],buildingSafetyRecords=[]}:{serviceCharges:ChargeEntry[];today:string;go:(view:View)=>void;blocks:Block[];isManager:boolean;viewerName:string;ownUnitCount:number;contractors?:Contractor[];workOrders?:WorkOrder[];buildingSafetyRecords?:BuildingSafetyRecord[]}){
