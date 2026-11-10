@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+const BuildingStatement=dynamic(()=>import("./BuildingStatement"));
 const ManagementReview=dynamic(()=>import("./ManagementReview"));
 import dashboardLogo from "../public/aviaf-dashboard-logo.png";
 import ResidentArchiveAction from "./ResidentArchiveAction";
@@ -19,8 +20,8 @@ import ManagementAlerts from "./ManagementAlerts";
 import CommunicationRegister from "./CommunicationRegister";
 import type {Block,Unit,Resident,WorkOrder,Contractor,ContractorDocument,BuildingSafetyRecord} from "./types";
 
-type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages"|"review";
-const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Health & Safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["messages","Communications","□"],["review","Management review","◇"]];
+type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages"|"review"|"statement";
+const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Health & Safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["statement","Building statement","▤"],["messages","Communications","□"],["review","Management review","◇"]];
 const headings=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
 export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail,canPostBatches=false}:{canPostBatches?:boolean;serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
@@ -43,6 +44,7 @@ export default function Portal({serviceCharges,today,tenantRequests,blocks,units
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={allResidents}/>}
    {view==="finance"&&<ServiceChargeRegister residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
+   {view==="statement"&&isManager&&<BuildingStatement blocks={blocks} today={today}/>}
    {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
    {view==="review"&&isManager&&<ManagementReview key={`${reviewTab}:${reviewBlock}`} initialTab={reviewTab} blocks={reviewBlock?[...blocks.filter(b=>b.id===reviewBlock),...blocks.filter(b=>b.id!==reviewBlock)]:blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} entries={serviceCharges} today={today} canPostBatches={canPostBatches} canRecordSettlements={memberRole==="owner"}/>}
   </div></section></main>

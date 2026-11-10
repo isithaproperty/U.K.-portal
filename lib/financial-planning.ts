@@ -79,6 +79,8 @@ export function prepareFinancialDraft(input:FinancialDraftInput):FinancialDraftR
  const periods=kind==="Demand"?planningPeriods(yearStart,frequency):[];
  if(kind==="Demand"&&(!Number.isInteger(periodIndex)||periodIndex<0||periodIndex>=periods.length))throw new Error("Choose a valid charge period.");
  if(!schedules.length||schedules.some(s=>!s.id.trim()||!s.name.trim())||new Set(schedules.map(s=>s.id)).size!==schedules.length)throw new Error("Add named lease schedules with distinct identifiers.");
+ const imported=schedules.filter(schedule=>schedule.id.startsWith("import-budget:"));
+ if(imported.length&&(schedules.length!==1||kind!=="Demand"||frequency!=="Annual"||imported[0].id!==`import-budget:${blockId}:${yearStart}`||batchId!==imported[0].id))throw new Error("Imported budgets require their stable building/year identity and a single Annual demand schedule. Re-import to change the confirmed year.");
  return schedules.flatMap(schedule=>apportionLeaseBudget(schedule.annualPence,schedule.shares).map(allocation=>{
   const amount=kind==="Surplus credit"?allocation.amountPence:Math.floor(allocation.amountPence/periods.length)+(periodIndex<allocation.amountPence%periods.length?1:0);
   return {idempotencyKey:`${batchId}:${schedule.id}:${allocation.unitId}:${kind==="Demand"?periodIndex:"surplus"}`,scheduleId:schedule.id,scheduleName:schedule.name,unitId:allocation.unitId,entryType:kind==="Demand"?"Charge" as const:"Credit" as const,amountPence:amount,preparedDate,plannedIssueDate:issueDate,dueDate:kind==="Demand"?dueDate:null,chargePeriod:kind==="Demand"?periods[periodIndex]:null};

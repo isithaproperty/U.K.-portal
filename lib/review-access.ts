@@ -1,6 +1,6 @@
 /** The hosted demo can run only on this isolated Vercel preview branch. */
 export function isHostedReviewPreview(environment:string|undefined,branch:string|undefined){
- return environment==="preview"&&branch==="review/london-management-adjustments";
+ return environment==="preview"&&["review/london-management-adjustments","review/building-financial-statements"].includes(branch??"");
 }
 export function canViewSyntheticReview(nodeEnv:string|undefined,enabled:string|undefined,environment?:string,branch?:string){
  return (nodeEnv==="development"&&enabled==="1")||isHostedReviewPreview(environment,branch);

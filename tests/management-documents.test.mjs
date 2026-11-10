@@ -35,3 +35,18 @@ test("rejects stale unit scope, unsaved revision and empty prepared state",async
  await assert.rejects(generateFinancialDocuments({...context,revision:0}));await assert.rejects(generateFinancialDocuments({...context,units:units.slice(1)}));await assert.rejects(generateFinancialDocuments({...context,state:{...state,prepared:null}}));
  assert.equal(escapeDocumentHtml(`<a href="x">'&`),"&lt;a href=&quot;x&quot;&gt;&#39;&amp;");
 });
+
+test("reference-inspired invoice layout keeps verified facts and never copies sample payments",async()=>{
+ const [document]=await generateFinancialDocuments(context);
+ assert.match(document.html,/<h1>Application For Payment<\/h1>/);
+ assert.match(document.html,/ISSUE DATE:/);assert.match(document.html,/INVOICE REFERENCE: Not issued/);
+ assert.match(document.html,/Description<\/th>/);assert.match(document.html,/class="value">Value/);
+ assert.match(document.html,/50% of £100.00 annual budget/);
+ assert.match(document.html,/Total amount demanded/);
+ assert.match(document.html,/No payment receipt is asserted/);
+ assert.match(document.body,/before separately recorded payments or credits/);
+ assert.match(document.html,/Address for service of notices/);
+ assert.match(document.html,/class="rights"/);assert.match(document.html,/break-before:page/);
+ assert.match(document.html,/DRAFT - NOT ISSUED/);
+ assert.match(document.html,/&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+});

@@ -9,6 +9,8 @@ test('synthetic preview fails closed outside explicit development opt-in',()=>{
 import {isHostedReviewPreview,syntheticPreviewRequest} from '../lib/review-access.ts';
 test('hosted demo requires both preview environment and exact isolated branch',()=>{
  assert.equal(isHostedReviewPreview('preview','review/london-management-adjustments'),true);
+ assert.equal(isHostedReviewPreview('preview','review/building-financial-statements'),true);
+ assert.equal(isHostedReviewPreview('production','review/building-financial-statements'),false);
  for(const env of ['production','development',undefined])assert.equal(isHostedReviewPreview(env,'review/london-management-adjustments'),false);
  for(const branch of ['main','other',undefined])assert.equal(isHostedReviewPreview('preview',branch),false);
  assert.equal(canViewSyntheticReview('production',undefined,'preview','review/london-management-adjustments'),true);

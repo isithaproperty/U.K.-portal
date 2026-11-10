@@ -61,3 +61,13 @@ test("ledger conversion requires approval, scopes units and generates repeatable
  const credit=await financialDraftToLedgerRows({...input,kind:"Surplus credit"},units,true);
  assert.ok(credit.every(row=>row.entry_type==="Credit"&&row.due_date===""));
 });
+
+test("imported annual budgets keep stable identity across retries and reject changed year or random batch ids",()=>{
+ const id="import-budget:1:2026-12-01";
+ const imported={...input,frequency:"Annual",batchId:id,schedules:[{...input.schedules[0],id}]};
+ const first=prepareFinancialDraft(imported);
+ const renamed=prepareFinancialDraft({...imported,schedules:[{...imported.schedules[0],name:"Renamed column"}]});
+ assert.deepEqual(first.map(row=>row.idempotencyKey),renamed.map(row=>row.idempotencyKey));
+ assert.throws(()=>prepareFinancialDraft({...imported,batchId:"new-random-id"}));
+ assert.throws(()=>prepareFinancialDraft({...imported,yearStart:"2027-12-01"}));
+});

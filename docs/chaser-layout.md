@@ -1,0 +1,9 @@
+# Draft arrears chaser layout
+
+Reference PDF was visually inspected. Its first page is a Request for Payment with issuer and correspondence blocks, property/reference/period line, debit/credit/running-balance table, highlighted total, legal panel and payment slip. The next page is a service-charge rights summary.
+
+`lib/chaser-document.ts` recreates that structure using current scoped ledger entries, confirmed recipient details and the selected building's existing payment settings. It never seeds the sample's names, addresses, references or bank details. Opening balance is computed before the chosen statement start; charges, payments and credits produce running balances. Only overdue charges are requested, not future/not-yet-due amounts. Paid/credit accounts fail closed. No fees, interest, 28-day deadline, legal action or service claim is automatically added. Missing landlord/payment/legal review details are flagged in the draft.
+
+Debtors now offers a fresh-account preview. Outside synthetic review, it calls the complete-read building statement endpoint before generation, failing if complete records cannot be verified. The endpoint depends on reviewed creditor/settlement storage being installed. The preview is always marked DRAFT - NOT SENT. HTML can be downloaded for printing; the exact plain-text version is captured by the existing reminder draft/revision workflow. HTML is not automatically dispatched and no email, posting, fee or reminder automation was added.
+
+Five focused tests cover opening/running/overdue balances, paid accounts, building scope, future entries, malformed/duplicate data, and HTML escaping. Interactive browser QA remains blocked by Chromium process-socket permissions. A synthetic two-page HTML/PDF render was produced with WeasyPrint and both pages visually checked for legibility, table alignment and clipping; do not claim an exact page count for arbitrarily long account histories or addresses.

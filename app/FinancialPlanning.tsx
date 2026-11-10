@@ -1,4 +1,5 @@
 "use client";
+import BudgetCsvImport from "./BudgetCsvImport";
 import {useEffect,useMemo,useRef,useState} from "react";
 import type {Block,Unit,Resident} from "./types";
 import {generateFinancialDocuments,type FinancialDocumentSnapshot} from "../lib/management-documents";
@@ -7,8 +8,8 @@ import {parsePounds,planningPeriods,prepareFinancialDraft,type DemandFrequency,v
 
 type ScheduleForm={id:string;name:string;amount:string;percentages:Record<number,string>};
 type Prepared={input:FinancialDraftInput;rows:FinancialDraftRow[]};
-export default function FinancialPlanning({blocks,units,today,reviewOnly=false,canPost=false}:{blocks:Block[];units:Unit[];residents?:Resident[];entries?:ChargeEntry[];today:string;reviewOnly?:boolean;canPost?:boolean}){
- const [blockId,setBlockId]=useState(blocks[0]?.id??0);
+export default function FinancialPlanning({blocks,units,today,reviewOnly=false,canPost=false,selectBuildingFirst=false}:{blocks:Block[];units:Unit[];residents?:Resident[];entries?:ChargeEntry[];today:string;reviewOnly?:boolean;canPost?:boolean;selectBuildingFirst?:boolean}){
+ const [blockId,setBlockId]=useState(selectBuildingFirst?0:blocks[0]?.id??0);
  const [kind,setKind]=useState<"Demand"|"Surplus credit">("Demand");
  const [schedules,setSchedules]=useState<ScheduleForm[]>([{id:"schedule-1",name:"",amount:"",percentages:{}}]);
  const [frequency,setFrequency]=useState<DemandFrequency>("Annual");
@@ -81,7 +82,9 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
   try{
    if(!leaseConfirmed)throw new Error("Confirm the schedule, percentages and dates against the leases before preparing.");
    if(!selectedUnits.length)throw new Error("This block has no units. Add units before preparing a batch.");
-   const input:FinancialDraftInput={batchId:crypto.randomUUID(),blockId,kind,preparedDate:today,issueDate,dueDate,issueMode,frequency,yearStart,periodIndex,schedules:schedules.map(schedule=>({id:schedule.id,name:schedule.name,annualPence:parsePounds(schedule.amount),shares:selectedUnits.map(unit=>({unitId:unit.id,percentage:schedule.percentages[unit.id]??""}))}))};
+   const imported=schedules.filter(schedule=>schedule.id.startsWith("import-budget:"));
+   if(imported.length&&(schedules.length!==1||imported[0].id!==`import-budget:${blockId}:${yearStart}`||kind!=="Demand"||frequency!=="Annual"))throw new Error("Imported annual budgets must remain a single Annual demand schedule for their confirmed building and year. Re-import to change that year; prepare other schedules separately.");
+   const input:FinancialDraftInput={batchId:imported.length?imported[0].id:crypto.randomUUID(),blockId,kind,preparedDate:today,issueDate,dueDate,issueMode,frequency,yearStart,periodIndex,schedules:schedules.map(schedule=>({id:schedule.id,name:schedule.name,annualPence:parsePounds(schedule.amount),shares:selectedUnits.map(unit=>({unitId:unit.id,percentage:schedule.percentages[unit.id]??""}))}))};
    const rows=prepareFinancialDraft(input);
    if(!rows.length)throw new Error("This period has no non-zero allocations. Review the budget and period.");
    setDocuments([]);setPrepared({input,rows});setError("");setStorageStatus(reviewOnly?"Preview batch prepared; saving is disabled.":"Batch prepared. Save explicitly to retain it with this budget.");
@@ -127,9 +130,10 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
   {storageStatus&&<p className="unit-message" role="status">{storageStatus}</p>}
   <fieldset disabled={loading||saving||posting||generatingDocuments} style={{border:0,padding:0,margin:0,minWidth:0}}>
   <div className="unit-select">
-   <label>Block<select value={blockId} onChange={event=>{invalidate();setBlockId(Number(event.target.value));setSchedules([{id:"schedule-1",name:"",amount:"",percentages:{}}]);}}>{blocks.map(block=><option key={block.id} value={block.id}>{block.name}</option>)}</select></label>
+   <label>Block<select value={blockId} onChange={event=>{invalidate();setBlockId(Number(event.target.value));setSchedules([{id:"schedule-1",name:"",amount:"",percentages:{}}]);}}><option value={0}>Choose a building</option>{blocks.map(block=><option key={block.id} value={block.id}>{block.name}</option>)}</select></label>
    <label>Batch type<select value={kind} onChange={event=>{invalidate();setKind(event.target.value as typeof kind);}}><option>Demand</option><option>Surplus credit</option></select></label>
   </div>
+  {kind==="Demand"&&blockId>0&&<BudgetCsvImport key={`${blockId}:${reload}`} blockId={blockId} blockName={blocks.find(block=>block.id===blockId)?.name??"Selected building"} units={selectedUnits} existingSchedules={schedules} onApply={(schedule,startDate)=>{if(schedules.some(item=>item.id===schedule.id||item.name===schedule.name))throw new Error("A schedule with this building and budget-year name already exists. Review the existing schedule before importing it again.");if(schedules.some(item=>item.name||item.amount)&&!confirm("Replace the current draft schedules for this building with this annual budget? This prevents adding a new year's budget to the old one. Existing posted resident charges are unchanged; saving retains revision history."))throw new Error("Import cancelled. Existing preparation is unchanged.");invalidate();setSchedules([schedule]);setFrequency("Annual");setPeriodIndex(0);if(startDate){setYearStart(startDate);setPeriodIndex(0);}}}/> }
   <p>Use each lease schedule’s actual percentages. Enter 0 for excluded units. Every schedule must total exactly 100%; equal shares are never assumed. Amounts are apportioned in pennies with rounding reconciled across units and instalments.</p>
   {schedules.map((schedule,index)=><fieldset key={schedule.id} style={{marginBottom:20,padding:16,border:"1px solid #d7d1c7"}}><legend>Lease schedule {index+1}</legend>
    <label>Schedule name / lease reference<input required maxLength={200} value={schedule.name} onChange={event=>changeSchedule(schedule.id,{name:event.target.value})}/></label>
@@ -138,8 +142,8 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
    {schedules.length>1&&<button className="unit-secondary" onClick={()=>{invalidate();setSchedules(current=>current.filter(item=>item.id!==schedule.id));}}>Remove schedule {index+1}</button>}
   </fieldset>)}
   <button className="unit-secondary" onClick={()=>{invalidate();setSchedules(current=>[...current,{id:crypto.randomUUID(),name:"",amount:"",percentages:{}}]);}}>Add lease schedule</button>
-  {kind==="Demand"&&<><label>Demand frequency<select value={frequency} onChange={event=>{invalidate();setFrequency(event.target.value as DemandFrequency);setPeriodIndex(0);}}><option>Annual</option><option>Half-yearly</option><option>Quarterly</option><option>English quarters</option></select></label>
-   <label>First charge-period start<input type="date" value={yearStart} onChange={event=>{invalidate();setYearStart(event.target.value);setPeriodIndex(0);}}/></label>
+  {kind==="Demand"&&<><label>Demand frequency<select disabled={schedules.some(schedule=>schedule.id.startsWith("import-budget:"))} value={frequency} onChange={event=>{invalidate();setFrequency(event.target.value as DemandFrequency);setPeriodIndex(0);}}><option>Annual</option><option>Half-yearly</option><option>Quarterly</option><option>English quarters</option></select></label>
+   <p>CSV-imported budgets are posted as one annual allocation. Their confirmed year is fixed; re-import to change it.</p><label>First charge-period start<input type="date" value={yearStart} readOnly={schedules.some(schedule=>schedule.id.startsWith("import-budget:"))} onChange={event=>{invalidate();setYearStart(event.target.value);setPeriodIndex(0);}}/></label>
    {frequency==="English quarters"&&<p>English quarter days: 25 March, 24 June, 29 September and 25 December. Select a quarter day as the first start; lease terms control.</p>}
    <label>Period to prepare<select value={periodIndex} onChange={event=>{invalidate();setPeriodIndex(Number(event.target.value));}}>{periods.map((period,index)=><option key={period.start} value={index}>{period.start} to {period.end}</option>)}</select></label></>}
   <p>Preparation date: <strong>{today}</strong>. Charge period, planned issue and payment due date are separate. A future due date must be used for a demand prepared ahead of its payment date.</p>
