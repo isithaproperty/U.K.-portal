@@ -49,7 +49,7 @@ export default function Portal({serviceCharges,today,tenantRequests,blocks,units
    {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={allResidents}/><WorkOrderRegister onOpenCreditors={id=>{setReviewTab(3);setReviewBlock(id);setView("review");}} blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/></>}
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={allResidents}/>}
-   {view==="finance"&&<ServiceChargeRegister residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
+   {view==="finance"&&<ServiceChargeRegister isManager={isManager} canPostBatches={canPostBatches} residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
    {view==="statement"&&isManager&&<BuildingStatement blocks={blocks} today={today}/>}
    {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
    {view==="review"&&isManager&&<ManagementReview key={`${reviewTab}:${reviewBlock}`} initialTab={reviewTab} blocks={reviewBlock?[...blocks.filter(b=>b.id===reviewBlock),...blocks.filter(b=>b.id!==reviewBlock)]:blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} entries={serviceCharges} today={today} canPostBatches={canPostBatches} canRecordSettlements={memberRole==="owner"}/>}

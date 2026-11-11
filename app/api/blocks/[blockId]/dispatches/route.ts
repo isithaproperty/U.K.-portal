@@ -1,3 +1,4 @@
+import {initialDemandBudget} from "../../../../../lib/recipient-budget-pdf";
 export const maxDuration=120;
 import {NextRequest} from "next/server";
 import {managementAccess,managementReply as reply} from "../../../../../lib/management-access";
@@ -44,8 +45,10 @@ export async function POST(request:NextRequest,context:Context){
    const {data:settings,error:settingsError}=await client.from("service_charge_document_settings").select("settings").eq("block_id",block.id).maybeSingle();if(settingsError)throw Error("Document settings unavailable.");
    const rows=await financialDraftToLedgerRows(state.prepared.input,units,true);const {data:entries,error:ledgerError}=await client.from("service_charge_entries").select("request_id,reference,unit_id,entry_type,description,amount_pence,entry_date,due_date").eq("block_id",block.id).in("request_id",rows.map(r=>r.request_id));if(ledgerError)throw Error("Posted ledger references could not be verified.");
    const docs=await generateFinancialDocuments({state,revision:saved.revision,today,mode:"Issue",block:{id:block.id,name:block.name,address:block.address,managementCompany:block.management_company},units,settings:settings?.settings,ledgerEntries:entries??[],documentReview:body.documentReview as FinancialDocumentInput["documentReview"]});
-   for(const doc of docs)envelopes.push(...await prepareDeliveryEnvelopes({operationId:`financial:${body.sourceId}:r${saved.revision}:c${lease?.revision}`,kind:doc.kind,blockId:block.id,unitId:doc.unitId,subject:doc.subject,body:doc.body,attachments:[doc.attachment],contacts:registry.contacts}));
-   sourceEvidence={financialRevision:saved.revision,contactRevision:lease?.revision,documentHashes:docs.map(d=>d.contentHash)};
+   const budget=initialDemandBudget(state,{id:block.id,name:block.name},saved.revision);
+   if(budget&&body.preview!==true&&body.budgetApproved!==true)throw Error("Review and approve the exact recipient-safe budget PDF before queuing the first demand.");
+   for(const doc of docs)envelopes.push(...await prepareDeliveryEnvelopes({operationId:`financial:${body.sourceId}:r${saved.revision}:c${lease?.revision}`,kind:doc.kind,blockId:block.id,unitId:doc.unitId,subject:doc.subject,body:doc.body,attachments:[doc.attachment,...(budget?[budget.attachment]:[])],contacts:registry.contacts}));
+   sourceEvidence={financialRevision:saved.revision,contactRevision:lease?.revision,documentHashes:docs.map(d=>d.contentHash),initialDemand:state.initialDemand??null,budget:budget?.evidence??null};
   }else if(body.source==="reminder"){
    const saved=find("debtors"),state=validateDebtorState(saved?.state,block.id,unitIds,today),draft=state.history.find(h=>h.id===body.sourceId);if(!draft)throw Error("Saved reminder is unavailable.");
    const allowed=new Set(contactRecipients(registry.contacts.filter(c=>c.unitId===draft.unitId),block.id,"Demand").map(r=>r.email));if(draft.recipients.some(email=>!allowed.has(email)))throw Error("Reminder recipients must match current confirmed leaseholder contacts for this unit.");

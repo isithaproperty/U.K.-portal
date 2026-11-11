@@ -22,6 +22,7 @@ export function parseCsv(text:string):string[][]{
  if(!rows.some(r=>r.some(v=>v.trim())))throw new Error("CSV is empty.");
  return rows;
 }
+function checkedText(value:string){if(/#EXCEL_ERROR|#MISSING_FORMULA_CACHE/.test(value))throw new Error("Selected budget cells contain Excel errors or missing cached formula values. Recalculate and save the workbook in Excel first.");return value;}
 function normalized(value:string){return value.trim().toLowerCase().replace(/\s+/g,"");}
 function dateValue(value:string):string{
  const clean=value.trim();if(!clean)return "";
@@ -31,15 +32,17 @@ function dateValue(value:string):string{
  return date;
 }
 export function inspectBudgetCsv(text:string):BudgetCsvTable{
- const rows=parseCsv(text);
+ return inspectBudgetRows(parseCsv(text));
+}
+export function inspectBudgetRows(rows:string[][]):BudgetCsvTable{
  const headerIndex=rows.findIndex(row=>row.some(value=>normalized(value)==="categoryname"));
- if(headerIndex<0)throw new Error("Choose the Summary CSV containing a CategoryName or Category Name column.");
- const headers=rows[headerIndex].map(value=>value.trim());
- if(headers.filter(value=>normalized(value)==="categoryname").length!==1)throw new Error("CSV has ambiguous category columns.");
+ if(headerIndex<0)throw new Error("Choose a Summary worksheet containing a CategoryName or Category Name column.");
+ const headers=rows[headerIndex].map(value=>checkedText(value).trim());
+ if(headers.filter(value=>normalized(value)==="categoryname").length!==1)throw new Error("Worksheet has ambiguous category columns.");
  const metadata:Record<string,string>={};
  for(const row of rows.slice(0,headerIndex)){
   const key=normalized(row[0]??"");if(["blockname","from","to"].includes(key)){
-   if(key in metadata)throw new Error("CSV contains duplicate budget metadata.");metadata[key]=(row[1]??"").trim();
+   if(key in metadata)throw new Error("Worksheet contains duplicate budget metadata.");metadata[key]=checkedText(row[1]??"").trim();
   }
  }
  const startDate=dateValue(metadata.from??""),endDate=dateValue(metadata.to??"");
@@ -60,7 +63,7 @@ export function buildBudgetPreview(table:BudgetCsvTable,amountColumn:number):{ca
  for(const row of table.rows.slice(table.headerIndex+1)){
   if(!row.some(value=>value.trim()))continue;
   if(row.length>table.headers.length&&row.slice(table.headers.length).some(value=>value.trim()))throw new Error("A budget row has more columns than its header.");
-  const name=(row[categoryColumn]??"").trim(),amount=(row[amountColumn]??"").trim();
+  const name=checkedText(row[categoryColumn]??"").trim(),amount=(row[amountColumn]??"").trim();
   if(!name||/^(?:grand\s+)?totals?$/i.test(name)){
    if(amount)totals.push(pounds(amount));
    else if(row.some(value=>value.trim()))throw new Error("A nonempty total row has no amount in the selected budget column.");

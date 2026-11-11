@@ -1,3 +1,4 @@
+import {validateRecipientBudgets,type RecipientBudgetSummary} from "./recipient-budget.ts";
 /** Pure preparation helpers. These do not create ledger entries or deliver demands. */
 export type DemandFrequency = "Annual" | "Half-yearly" | "Quarterly" | "English quarters";
 export type LeaseShare = {unitId:number; percentage:string};
@@ -94,6 +95,7 @@ export type FinancialPlanningState={
  frequency:DemandFrequency;yearStart:string;periodIndex:number;
  issueMode:FinancialDraftInput["issueMode"];issueDate:string;dueDate:string;
  prepared:PreparedFinancialBatch|null;
+ initialDemand?:boolean; recipientBudgets?:RecipientBudgetSummary[];
 };
 /** Validates stored form data and recomputes prepared amounts. Never trusts stored row totals. */
 export function validateFinancialState(value:unknown,blockId:number,unitIds:number[],today:string):FinancialPlanningState{
@@ -110,6 +112,8 @@ export function validateFinancialState(value:unknown,blockId:number,unitIds:numb
   for(const [id,percentage] of Object.entries(schedule.percentages))if(!allowed.has(id)||typeof percentage!=="string"||percentage.length>20)return invalid();
  }
  if(new Set(state.schedules.map(schedule=>schedule.id)).size!==state.schedules.length)return invalid();
+ if(state.initialDemand!==undefined&&typeof state.initialDemand!=="boolean")return invalid();
+ const recipientBudgets=validateRecipientBudgets(state.recipientBudgets??[],blockId,state.yearStart,state.schedules);
  let prepared:PreparedFinancialBatch|null=null;
  if(state.prepared!==null){
   try{
@@ -128,7 +132,7 @@ export function validateFinancialState(value:unknown,blockId:number,unitIds:numb
    prepared={input:expected,rows};
   }catch{return invalid();}
  }
- return {version:1,blockId,kind:state.kind,schedules:state.schedules.map(schedule=>({id:schedule.id,name:schedule.name,amount:schedule.amount,percentages:{...schedule.percentages}})),frequency:state.frequency,yearStart:state.yearStart,periodIndex:state.periodIndex,issueMode:state.issueMode,issueDate:state.issueDate,dueDate:state.dueDate,prepared};
+ return {version:1,blockId,kind:state.kind,schedules:state.schedules.map(schedule=>({id:schedule.id,name:schedule.name,amount:schedule.amount,percentages:{...schedule.percentages}})),frequency:state.frequency,yearStart:state.yearStart,periodIndex:state.periodIndex,issueMode:state.issueMode,issueDate:state.issueDate,dueDate:state.dueDate,prepared,...(state.initialDemand!==undefined?{initialDemand:state.initialDemand}:{}),...(recipientBudgets.length?{recipientBudgets}:{})};
 }
 
 /** Conversion only: caller must authorize manager scope and approve the immutable batch before invoking the ledger RPC. */

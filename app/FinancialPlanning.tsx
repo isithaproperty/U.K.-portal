@@ -1,4 +1,5 @@
 "use client";
+import type {RecipientBudgetSummary} from "../lib/recipient-budget";
 import BudgetCsvImport from "./BudgetCsvImport";
 import {useEffect,useMemo,useRef,useState} from "react";
 import type {Block,Unit,Resident} from "./types";
@@ -12,6 +13,7 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
  const [blockId,setBlockId]=useState(selectBuildingFirst?0:blocks[0]?.id??0);
  const [kind,setKind]=useState<"Demand"|"Surplus credit">("Demand");
  const [schedules,setSchedules]=useState<ScheduleForm[]>([{id:"schedule-1",name:"",amount:"",percentages:{}}]);
+ const [recipientBudgets,setRecipientBudgets]=useState<RecipientBudgetSummary[]>([]),[initialDemand,setInitialDemand]=useState<boolean|undefined>(undefined);
  const [frequency,setFrequency]=useState<DemandFrequency>("Annual");
  const [yearStart,setYearStart]=useState(today);
  const [periodIndex,setPeriodIndex]=useState(0);
@@ -27,12 +29,12 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
  const [posting,setPosting]=useState(false),[savedBatchId,setSavedBatchId]=useState<string|null>(null),[postedBatchId,setPostedBatchId]=useState<string|null>(null);
  const selectedUnits=useMemo(()=>units.filter(unit=>unit.blockId===blockId),[units,blockId]);
  const periods=useMemo(()=>{try{return planningPeriods(yearStart,frequency);}catch{return [];}},[yearStart,frequency]);
- function applyState(state:FinancialPlanningState){setKind(state.kind);setSchedules(state.schedules);setFrequency(state.frequency);setYearStart(state.yearStart);setPeriodIndex(state.periodIndex);setIssueMode(state.issueMode);setIssueDate(state.issueDate);setDueDate(state.dueDate);setPrepared(state.prepared);setLeaseConfirmed(false);}
+ function applyState(state:FinancialPlanningState){setRecipientBudgets(state.recipientBudgets??[]);setInitialDemand(state.initialDemand);setKind(state.kind);setSchedules(state.schedules);setFrequency(state.frequency);setYearStart(state.yearStart);setPeriodIndex(state.periodIndex);setIssueMode(state.issueMode);setIssueDate(state.issueDate);setDueDate(state.dueDate);setPrepared(state.prepared);setLeaseConfirmed(false);}
  useEffect(()=>{
   const controller=new AbortController();
   documentGeneration.current++;setGeneratingDocuments(false);
   setDocuments([]);setDocumentUnit(null);setPersistenceReady(false);setRevision(0);setConflict(false);setSavedBatchId(null);setPostedBatchId(null);setError("");setLeaseConfirmed(false);setPrepared(null);
-  setKind("Demand");setSchedules([{id:"schedule-1",name:"",amount:"",percentages:{}}]);setFrequency("Annual");setYearStart(today);setPeriodIndex(0);setIssueMode("Issue now, future due date");setIssueDate(today);setDueDate(today);
+  setRecipientBudgets([]);setInitialDemand(undefined);setKind("Demand");setSchedules([{id:"schedule-1",name:"",amount:"",percentages:{}}]);setFrequency("Annual");setYearStart(today);setPeriodIndex(0);setIssueMode("Issue now, future due date");setIssueDate(today);setDueDate(today);
   if(reviewOnly||!blockId){setLoading(false);setStorageStatus(reviewOnly?"Preview only: saving is disabled.":"");return ()=>controller.abort();}
   setLoading(true);setStorageStatus("Loading saved financial preparation…");
   void(async()=>{try{
@@ -52,7 +54,7 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
   if(reviewOnly||!persistenceReady||conflict||saveLock.current||postLock.current)return;
   saveLock.current=true;setSaving(true);setStorageStatus("");
   try{
-   const state=validateFinancialState({version:1,blockId,kind,schedules,frequency,yearStart,periodIndex,issueMode,issueDate,dueDate,prepared},blockId,selectedUnits.map(unit=>unit.id),today);
+   const state=validateFinancialState({version:1,blockId,kind,schedules,frequency,yearStart,periodIndex,issueMode,issueDate,dueDate,prepared,recipientBudgets,initialDemand},blockId,selectedUnits.map(unit=>unit.id),today);
    const response=await fetch(`/api/blocks/${blockId}/management-review/financials`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({state,revision})});const result=await response.json();
    if(response.status===409){setConflict(true);throw new Error("Another manager has saved changes. Export your prepared batch if needed, then reload the saved version before saving again.");}
    if(!response.ok)throw new Error(result.error||"Financial preparation was not saved.");
@@ -76,8 +78,8 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
   }catch(cause){setStorageStatus(cause instanceof Error?cause.message:"Ledger outcome could not be confirmed. Keep this saved batch identifier when checking or retrying.");}
   finally{postLock.current=false;setPosting(false);}
  }
- function invalidate(){setDocuments([]);setPrepared(null);setError("");setLeaseConfirmed(false);setStorageStatus(reviewOnly?"Preview only: saving is disabled.":"Unsaved changes. Save explicitly to keep this preparation.");}
- function changeSchedule(id:string,patch:Partial<ScheduleForm>){invalidate();setSchedules(current=>current.map(schedule=>schedule.id===id?{...schedule,...patch}:schedule));}
+ function invalidate(){setInitialDemand(undefined);setDocuments([]);setPrepared(null);setError("");setLeaseConfirmed(false);setStorageStatus(reviewOnly?"Preview only: saving is disabled.":"Unsaved changes. Save explicitly to keep this preparation.");}
+ function changeSchedule(id:string,patch:Partial<ScheduleForm>){invalidate();if(patch.amount!==undefined||patch.name!==undefined)setRecipientBudgets(current=>current.filter(summary=>summary.scheduleId!==id));setSchedules(current=>current.map(schedule=>schedule.id===id?{...schedule,...patch}:schedule));}
  function prepare(){
   try{
    if(!leaseConfirmed)throw new Error("Confirm the schedule, percentages and dates against the leases before preparing.");
@@ -97,7 +99,7 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
   try{
    let result:readonly Readonly<FinancialDocumentSnapshot>[];
    if(reviewOnly){
-    const state=validateFinancialState({version:1,blockId,kind,schedules,frequency,yearStart,periodIndex,issueMode,issueDate,dueDate,prepared},blockId,selectedUnits.map(unit=>unit.id),today);
+    const state=validateFinancialState({version:1,blockId,kind,schedules,frequency,yearStart,periodIndex,issueMode,issueDate,dueDate,prepared,recipientBudgets,initialDemand},blockId,selectedUnits.map(unit=>unit.id),today);
     const block=blocks.find(item=>item.id===blockId);if(!block)throw new Error("Select a block.");
     result=await generateFinancialDocuments({state,revision:1,today,mode:"Draft",block,units:selectedUnits,settings:block.documentSettings});
    }else{
@@ -133,19 +135,24 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
    <label>Block<select value={blockId} onChange={event=>{invalidate();setBlockId(Number(event.target.value));setSchedules([{id:"schedule-1",name:"",amount:"",percentages:{}}]);}}><option value={0}>Choose a building</option>{blocks.map(block=><option key={block.id} value={block.id}>{block.name}</option>)}</select></label>
    <label>Batch type<select value={kind} onChange={event=>{invalidate();setKind(event.target.value as typeof kind);}}><option>Demand</option><option>Surplus credit</option></select></label>
   </div>
-  {kind==="Demand"&&blockId>0&&<BudgetCsvImport key={`${blockId}:${reload}`} blockId={blockId} blockName={blocks.find(block=>block.id===blockId)?.name??"Selected building"} units={selectedUnits} existingSchedules={schedules} onApply={(schedule,startDate)=>{if(schedules.some(item=>item.id===schedule.id||item.name===schedule.name))throw new Error("A schedule with this building and budget-year name already exists. Review the existing schedule before importing it again.");if(schedules.some(item=>item.name||item.amount)&&!confirm("Replace the current draft schedules for this building with this annual budget? This prevents adding a new year's budget to the old one. Existing posted resident charges are unchanged; saving retains revision history."))throw new Error("Import cancelled. Existing preparation is unchanged.");invalidate();setSchedules([schedule]);setFrequency("Annual");setPeriodIndex(0);if(startDate){setYearStart(startDate);setPeriodIndex(0);}}}/> }
+  {kind==="Demand"&&blockId>0&&<BudgetCsvImport key={`${blockId}:${reload}`} blockId={blockId} blockName={blocks.find(block=>block.id===blockId)?.name??"Selected building"} units={selectedUnits} existingSchedules={schedules} onApply={(schedule,startDate,recipientBudget)=>{if(schedules.some(item=>item.name||item.amount)&&!confirm("Replace the current draft schedules for this building with this annual budget? This prevents adding a new year's budget to the old one. Existing posted resident charges are unchanged; saving retains revision history."))throw new Error("Import cancelled. Existing preparation is unchanged.");invalidate();setRecipientBudgets(recipientBudget?[recipientBudget]:[]);setSchedules([schedule]);setFrequency("Annual");setPeriodIndex(0);if(startDate){setYearStart(startDate);setPeriodIndex(0);}}}/> }
   <p>Use each lease schedule’s actual percentages. Enter 0 for excluded units. Every schedule must total exactly 100%; equal shares are never assumed. Amounts are apportioned in pennies with rounding reconciled across units and instalments.</p>
   {schedules.map((schedule,index)=><fieldset key={schedule.id} style={{marginBottom:20,padding:16,border:"1px solid #d7d1c7"}}><legend>Lease schedule {index+1}</legend>
    <label>Schedule name / lease reference<input required maxLength={200} value={schedule.name} onChange={event=>changeSchedule(schedule.id,{name:event.target.value})}/></label>
    <label>{kind==="Demand"?"Annual budget (£)":"Total surplus to credit (£)"}<input type="number" min="0.01" max="9999999.99" step="0.01" value={schedule.amount} onChange={event=>changeSchedule(schedule.id,{amount:event.target.value})}/></label>
    <div className="block-table-wrap"><table><caption>Lease apportionment for {schedule.name||`schedule ${index+1}`}</caption><thead><tr><th>Unit</th><th>Lease percentage</th></tr></thead><tbody>{selectedUnits.map(unit=><tr key={unit.id}><td>{unit.unitNumber}</td><td><label><span className="eyebrow">{unit.unitNumber} share (%)</span><input aria-label={`${unit.unitNumber} percentage for schedule ${index+1}`} type="number" min="0" max="100" step="0.0001" value={schedule.percentages[unit.id]??""} onChange={event=>changeSchedule(schedule.id,{percentages:{...schedule.percentages,[unit.id]:event.target.value}})}/></label></td></tr>)}</tbody></table></div>
-   {schedules.length>1&&<button className="unit-secondary" onClick={()=>{invalidate();setSchedules(current=>current.filter(item=>item.id!==schedule.id));}}>Remove schedule {index+1}</button>}
+   {schedules.length>1&&<button className="unit-secondary" onClick={()=>{invalidate();setSchedules(current=>current.filter(item=>item.id!==schedule.id));setRecipientBudgets(current=>current.filter(summary=>summary.scheduleId!==schedule.id));}}>Remove schedule {index+1}</button>}
   </fieldset>)}
   <button className="unit-secondary" onClick={()=>{invalidate();setSchedules(current=>[...current,{id:crypto.randomUUID(),name:"",amount:"",percentages:{}}]);}}>Add lease schedule</button>
   {kind==="Demand"&&<><label>Demand frequency<select disabled={schedules.some(schedule=>schedule.id.startsWith("import-budget:"))} value={frequency} onChange={event=>{invalidate();setFrequency(event.target.value as DemandFrequency);setPeriodIndex(0);}}><option>Annual</option><option>Half-yearly</option><option>Quarterly</option><option>English quarters</option></select></label>
-   <p>CSV-imported budgets are posted as one annual allocation. Their confirmed year is fixed; re-import to change it.</p><label>First charge-period start<input type="date" value={yearStart} readOnly={schedules.some(schedule=>schedule.id.startsWith("import-budget:"))} onChange={event=>{invalidate();setYearStart(event.target.value);setPeriodIndex(0);}}/></label>
+   <p>Imported budgets are posted as one annual allocation. Their confirmed year is fixed; re-import to change it.</p><label>First charge-period start<input type="date" value={yearStart} readOnly={schedules.some(schedule=>schedule.id.startsWith("import-budget:"))} onChange={event=>{invalidate();setRecipientBudgets([]);setYearStart(event.target.value);setPeriodIndex(0);}}/></label>
    {frequency==="English quarters"&&<p>English quarter days: 25 March, 24 June, 29 September and 25 December. Select a quarter day as the first start; lease terms control.</p>}
    <label>Period to prepare<select value={periodIndex} onChange={event=>{invalidate();setPeriodIndex(Number(event.target.value));}}>{periods.map((period,index)=><option key={period.start} value={index}>{period.start} to {period.end}</option>)}</select></label></>}
+  {kind==="Demand"&&<section aria-label="Budget attachment for demand"><h3>Budget attachment</h3>
+   <p>{recipientBudgets.length?`${recipientBudgets.length} reviewed category summary retained for this building and year. Save the budget to retain it for delivery.`:"No resident-facing budget summary retained. Import and approve the category summary above before preparing an initial demand. Editing a schedule name, amount or year removes its summary and requires re-import and review."}</p>
+   <label>Is this the initial demand for this building and financial year?<select value={initialDemand===undefined?"":initialDemand?"initial":"later"} onChange={event=>{invalidate();setInitialDemand(event.target.value===""?undefined:event.target.value==="initial");}}><option value="">Choose explicitly before delivery</option><option value="initial">Initial demand: include reviewed budget summary</option><option value="later">Later demand: do not attach the annual budget</option></select></label>
+   <p>The choice does not send anything. Initial delivery requires a matching saved summary for every schedule and a separate review of the generated PDF. Existing delivery history must be checked before designating a demand as initial.</p>
+  </section>}
   <p>Preparation date: <strong>{today}</strong>. Charge period, planned issue and payment due date are separate. A future due date must be used for a demand prepared ahead of its payment date.</p>
   <label>Issue mode<select value={issueMode} onChange={event=>{invalidate();setIssueMode(event.target.value as typeof issueMode);if(event.target.value==="Issue now, future due date")setIssueDate(today);}}><option>Issue now, future due date</option><option>Schedule for later</option></select></label>
   <label>Planned issue date<input type="date" min={today} value={issueDate} readOnly={issueMode==="Issue now, future due date"} onChange={event=>{invalidate();setIssueDate(event.target.value);}}/></label>
