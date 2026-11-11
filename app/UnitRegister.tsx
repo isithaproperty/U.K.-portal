@@ -1,11 +1,12 @@
 "use client";
 
+import {reconcileShares} from "../lib/budget-import";
 import ResidentArchiveAction from "./ResidentArchiveAction";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import type { Block, Resident, Unit } from "./types";
 
-const template = "unit_number,resident_name,resident_email,phone,payment_reference\n";
+const template = "unit_number,resident_name,resident_email,phone,payment_reference,service_charge_percentage\n";
 
 export default function UnitRegister({ blocks, units, residents, initialBlockId }: {
   blocks: Block[]; units: Unit[]; residents: Resident[]; initialBlockId: number | null;
@@ -17,12 +18,18 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
   const [residentName, setResidentName] = useState("");
   const [residentEmail, setResidentEmail] = useState("");
   const [paymentReference,setPaymentReference]=useState("");
+  const [percentage,setPercentage]=useState("");
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [archived,setArchived]=useState(false);
  const selected = blocks.find(block => block.id === blockId);
   const visibleUnits = useMemo(() => units.filter(unit => unit.blockId === blockId), [units, blockId]);
+  const shareStatus=useMemo(()=>{
+    if(!visibleUnits.length)return "Add units before importing a budget.";
+    if(visibleUnits.some(unit=>unit.serviceChargePercentage==null))return "Incomplete apportionments: automatic budget allocation is blocked until every unit has a share, including 0% for exclusions.";
+    try{const result=reconcileShares(visibleUnits.map(unit=>({unitId:unit.id,percentage:unit.serviceChargePercentage!})));return `Source total ${result.sourceTotal}%. ${result.adjusted?"Budget previews will require approval of rounding reconciliation to exactly 100%.":"Ready for budget allocation preview."}`;}catch(error){return `Automatic budget allocation blocked: ${(error as Error).message}`;}
+  },[visibleUnits]);
   const byUnit = useMemo(() => {
     const map = new Map<number, Resident[]>();
     residents.filter(resident => resident.blockId === blockId && Boolean(resident.archivedAt)===archived).forEach(resident => map.set(resident.unitId, [...(map.get(resident.unitId) ?? []), resident]));
@@ -36,7 +43,7 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Import failed.");
       setMessage(`Saved ${result.imported} row${result.imported === 1 ? "" : "s"} to ${selected?.name ?? "this block"}.`);
-      setFile(null); setUnitNumber(""); setResidentName(""); setResidentEmail(""); setPhone(""); setPaymentReference("");
+      setFile(null); setUnitNumber(""); setResidentName(""); setResidentEmail(""); setPhone(""); setPaymentReference(""); setPercentage("");
       router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed."); }
     finally { setBusy(false); }
@@ -50,21 +57,22 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
 
   return <section className="unit-register">
     <div className="page-head"><div><p className="eyebrow">BLOCK MANAGEMENT</p><h1>Units & residents</h1><p>Add units to a block, then assign residents by their sign-in email.</p></div></div>
-    <section className="panel unit-select"><label>Choose block<select value={blockId} onChange={event => { setBlockId(Number(event.target.value)); setMessage(""); }}>{blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label><span>{visibleUnits.length} units entered · {residents.filter(row => row.blockId === blockId && Boolean(row.archivedAt)===archived).length} resident assignments</span></section>
+    <section className="panel unit-select"><label>Choose block<select disabled={busy} value={blockId} onChange={event => { setBlockId(Number(event.target.value)); setMessage(""); }}>{blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label><span>{visibleUnits.length} units entered · {residents.filter(row => row.blockId === blockId && Boolean(row.archivedAt)===archived).length} resident assignments</span></section>
     <div className="unit-grid">
-      <section className="panel"><p className="eyebrow">ONE AT A TIME</p><h2>Add a unit or resident</h2><form onSubmit={event => { event.preventDefault(); void importRows(JSON.stringify({ rows: [{ unit_number: unitNumber, resident_name: residentName, resident_email: residentEmail, phone,payment_reference:paymentReference }] }), "application/json"); }}>
+      <section className="panel"><p className="eyebrow">ONE AT A TIME</p><h2>Add a unit or resident</h2><form onSubmit={event => { event.preventDefault(); void importRows(JSON.stringify({ rows: [{ unit_number: unitNumber, resident_name: residentName, resident_email: residentEmail, phone,payment_reference:paymentReference,service_charge_percentage:percentage }] }), "application/json"); }}>
         <label>Unit number<input required maxLength={80} value={unitNumber} onChange={event => setUnitNumber(event.target.value)} placeholder="For example: Flat 1" /></label>
         <label>Resident name<input value={residentName} onChange={event => setResidentName(event.target.value)} placeholder="Leave blank for an empty unit" /></label>
         <label>Resident email<input type="email" value={residentEmail} onChange={event => setResidentEmail(event.target.value)} placeholder="Used for resident sign-in" /></label>
-        <label>Fixed payment reference<input maxLength={80} value={paymentReference} onChange={event=>setPaymentReference(event.target.value)} placeholder="For example: 469/1104-01"/></label><label>Phone<input value={phone} onChange={event => setPhone(event.target.value)} /></label>
+        <label>Service charge apportionment (%)<input inputMode="decimal" value={percentage} onChange={event=>setPercentage(event.target.value)} placeholder="Blank preserves the saved share"/></label><label>Fixed payment reference<input maxLength={80} value={paymentReference} onChange={event=>setPaymentReference(event.target.value)} placeholder="For example: 469/1104-01"/></label><label>Phone<input value={phone} onChange={event => setPhone(event.target.value)} /></label>
         <button className="primary" disabled={busy || !blockId}>Save unit</button>
       </form></section>
-      <section className="panel"><p className="eyebrow">BULK IMPORT</p><h2>Upload resident list</h2><p>Download the CSV template and enter one row per unit and resident. Repeat a unit number to assign more than one resident. An empty resident name and email creates a unit without access. Add the fixed payment reference when assigning residents. Joint residents in a unit share its service charge account and reference. Blank references preserve existing references.</p><button type="button" className="unit-secondary" onClick={downloadTemplate}>Download CSV template</button><label>CSV file<input type="file" accept=".csv,text/csv" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label><button className="primary" disabled={busy || !file || !blockId} onClick={() => file && void file.text().then(text => importRows(text, "text/csv"))}>Import to {selected?.name ?? "block"}</button><small>Up to 500 rows and 1 MB per import. Importing the same unit and email updates its details; it does not erase other residents.</small></section>
+      <section className="panel"><p className="eyebrow">BULK IMPORT</p><h2>Upload resident list</h2><p>Download the CSV template and enter one row per unit and resident. Repeat a unit number to assign more than one resident. An empty resident name and email creates a unit without access. Add the fixed payment reference when assigning residents. Joint residents in a unit share its service charge account and reference. Blank references preserve existing references. Add service_charge_percentage once per unit (repeat the same value for joint residents, or leave later rows blank). Blank shares preserve saved values. Unit exports with Unit Code, Unit Name and Service Charge (Percentage) are also accepted. External IDs are ignored. Incomplete shares are saved for review but cannot allocate budgets until every unit is covered and totals reconcile.</p><button type="button" className="unit-secondary" onClick={downloadTemplate}>Download CSV template</button><label>CSV file<input type="file" accept=".csv,text/csv" onChange={event => setFile(event.target.files?.[0] ?? null)} /></label><button className="primary" disabled={busy || !file || !blockId} onClick={() => file && void file.text().then(text => importRows(text, "text/csv"))}>Import to {selected?.name ?? "block"}</button><small>Up to 500 rows and 1 MB per import. Importing the same unit and email updates its details; it does not erase other residents.</small></section>
     </div>
+    <p>Saved apportionments: {visibleUnits.filter(unit=>unit.serviceChargePercentage!=null).length} of {visibleUnits.length} units. {shareStatus} Budget uploads reuse these shares, then show any rounding adjustments for approval before saving. No charges are posted by this import.</p>
     {message && <p className="unit-message" role="status">{message}</p>}
-    <nav className="tenant-tabs"><button className={!archived?"active":""} onClick={()=>setArchived(false)}>Current residents</button><button className={archived?"active":""} onClick={()=>setArchived(true)}>Archive</button></nav><section className="panel unit-list"><div className="panel-head"><div><p className="eyebrow">{selected?.name.toUpperCase()}</p><h2>Unit register</h2></div></div>{visibleUnits.length ? <div className="block-table-wrap"><table className="block-table"><thead><tr><th>Unit</th><th>Resident</th><th>Email</th><th>Phone</th><th>Payment reference</th><th>Actions</th></tr></thead><tbody>{visibleUnits.flatMap(unit => {
+    <nav className="tenant-tabs"><button className={!archived?"active":""} onClick={()=>setArchived(false)}>Current residents</button><button className={archived?"active":""} onClick={()=>setArchived(true)}>Archive</button></nav><section className="panel unit-list"><div className="panel-head"><div><p className="eyebrow">{selected?.name.toUpperCase()}</p><h2>Unit register</h2></div></div>{visibleUnits.length ? <div className="block-table-wrap"><table className="block-table"><thead><tr><th>Unit</th><th>Resident</th><th>Email</th><th>Phone</th><th>Payment reference</th><th>Apportionment</th><th>Actions</th></tr></thead><tbody>{visibleUnits.flatMap(unit => {
       const people = byUnit.get(unit.id) ?? [];
-      return people.length ? people.map(person => <tr key={person.id}><td>{unit.unitNumber}</td><td>{person.fullName}</td><td>{person.email}</td><td>{person.phone ?? "—"}</td><td>{unit.paymentReference??"Not added"}</td><td>{!person.archivedAt&&<a href={`/tenant?resident=${person.id}`}>Preview tenant portal</a>}<ResidentArchiveAction resident={person}/></td></tr>) : archived?[]:[<tr key={`unit-${unit.id}`}><td>{unit.unitNumber}</td><td>Unassigned</td><td>—</td><td>—</td><td>{unit.paymentReference??"Not added"}</td><td>—</td></tr>];
+      return people.length ? people.map(person => <tr key={person.id}><td>{unit.unitNumber}</td><td>{person.fullName}</td><td>{person.email}</td><td>{person.phone ?? "—"}</td><td>{unit.paymentReference??"Not added"}</td><td>{unit.serviceChargePercentage!=null?`${unit.serviceChargePercentage}%`:"Not added"}</td><td>{!person.archivedAt&&<a href={`/tenant?resident=${person.id}`}>Preview tenant portal</a>}<ResidentArchiveAction resident={person}/></td></tr>) : archived?[]:[<tr key={`unit-${unit.id}`}><td>{unit.unitNumber}</td><td>Unassigned</td><td>—</td><td>—</td><td>{unit.paymentReference??"Not added"}</td><td>{unit.serviceChargePercentage!=null?`${unit.serviceChargePercentage}%`:"Not added"}</td><td>—</td></tr>];
     })}</tbody></table></div> : <p>No units have been added to this block.</p>}</section>
   </section>;
 }

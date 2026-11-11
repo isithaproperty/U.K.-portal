@@ -12,7 +12,7 @@ export type Block = {
   myBlockManExportEnabled: boolean;
 };
 
-export type Unit = { paymentReference: string | null; id: number; blockId: number; unitNumber: string };
+export type Unit = { serviceChargePercentage?: string | null; paymentReference: string | null; id: number; blockId: number; unitNumber: string };
 export type Resident = { archivedAt?:string|null; id: number; unitId: number; blockId: number; fullName: string; email: string; phone: string | null };
 
 export type Contractor = { id:number; companyName:string; contactName:string|null; email:string|null; phone:string|null; trade:string; companyRegistration:string|null; vatNumber:string|null; status:"Pending"|"Approved"|"Suspended"; expiryPauseReason:string; notes:string; createdAt:string; updatedAt:string };

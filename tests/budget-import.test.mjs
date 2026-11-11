@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCsv,inspectBudgetCsv,buildBudgetPreview,parseUnitSharesCsv,reconcileShares} from '../lib/budget-import.ts';
+import {parseCsv,inspectBudgetCsv,buildBudgetPreview,parseUnitSharesCsv,reconcileShares,sourcePercentageString} from '../lib/budget-import.ts';
 const csv='Block Name,Sample Court,,\r\nFrom,01/10/2026,,\r\nTo,2027-09-30,,\r\n,,,\r\nCategoryName,Budget 2025 - 2026,Budget 2026 - 2027,Notes\r\nCleaning,200,300,"New, contract"\r\nElectricity,100,0,\r\n,300,300,';
 test('CSV quotes, escaped quotes, BOM and newlines',()=>{
  assert.deepEqual(parseCsv('\uFEFFa,b\r\n"x,y","a""b\nc"\r\n'),[['a','b'],['x,y','a"b\nc']]);
@@ -37,4 +37,13 @@ test('Rounded shares reconcile exactly with stable unit IDs and expose adjustmen
  assert.equal(reconcileShares([{unitId:1,percentage:'100'}]).adjusted,false);
  assert.equal(reconcileShares([{unitId:1,percentage:'0'},{unitId:2,percentage:'100'}]).percentages[1],'0.0000');
  for(const bad of [[],[{unitId:1,percentage:'99'}],[{unitId:1,percentage:'0'}],[{unitId:1,percentage:'50'},{unitId:1,percentage:'50'}],[{unitId:0,percentage:'100'}]])assert.throws(()=>reconcileShares(bad));
+});
+
+test('saved numeric JSON percentages retain tiny decimals without exponent notation',()=>{
+ assert.equal(sourcePercentageString(1e-12),'0.000000000001');
+ assert.equal(sourcePercentageString(0),'0.000000000000');
+ assert.equal(sourcePercentageString(null),null);
+ assert.equal(sourcePercentageString('7.142860000000'),'7.142860000000');
+ const result=reconcileShares([{unitId:1,percentage:sourcePercentageString(1e-12)},{unitId:2,percentage:'99.999999999999'}]);
+ assert.equal(result.sourceTotal,'100');
 });

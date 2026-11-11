@@ -1,3 +1,4 @@
+import {sourcePercentageString} from "../lib/budget-import";
 import ReviewPage from "./review/page";
 import {isHostedReviewPreview} from "../lib/review-access";
 import { redirect } from "next/navigation";
@@ -33,13 +34,16 @@ export default async function Home() {
   if(chargeError) return <main className="login-page"><div className="login-card"><h1>Service charges unavailable</h1><p>Please try again shortly.</p></div></main>;
   const {data:documentSettings,error:documentError}=await supabase.from("service_charge_document_settings").select("block_id,settings");
   if(documentError) return <main className="login-page"><div className="login-card"><h1>Service charge documents unavailable</h1><p>Please try again shortly.</p></div></main>;
+  // Separate optional query keeps the old register usable until the schema proposal is approved.
+  const {data:unitShares}=await supabase.from("units").select("id,service_charge_percentage");
+  const savedShares=new Map((unitShares??[]).map(share=>[share.id,sourcePercentageString(share.service_charge_percentage)]));
   const data = blockResult.data;
   const blocks: Block[] = (data ?? []).map(row => ({
     documentSettings:documentSettings?.find(x=>x.block_id===row.id)?.settings, id: row.id, name: row.name, managementCompany: row.management_company,
     type: row.type, address: row.address, units: row.units, manager: row.manager,
     financialYearEnd: row.financial_year_end, myBlockManExportEnabled: row.myblockman_export_enabled,
   }));
-  const units: Unit[] = (unitResult.data ?? []).map(row => ({ id: row.id, blockId: row.block_id, unitNumber: row.unit_number, paymentReference:row.payment_reference }));
+  const units: Unit[] = (unitResult.data ?? []).map(row => ({ id: row.id, blockId: row.block_id, unitNumber: row.unit_number, paymentReference:row.payment_reference, serviceChargePercentage:savedShares.get(row.id)??null }));
   const residents: Resident[] = (residentResult.data ?? []).map(row => ({ id: row.id, unitId: row.unit_id, blockId: row.block_id, archivedAt:row.archived_at, fullName: row.full_name, email: row.email, phone: row.phone }));
   const workOrders: WorkOrder[] = (workOrderResult.data ?? []).map(row => ({ id:row.id, workOrderNumber:row.work_order_number, blockId:row.block_id, unitId:row.unit_id, residentId:row.resident_id, contractorId:row.contractor_id, title:row.title, description:row.description, category:row.category, priority:row.priority, status:row.status, contractor:row.contractor, estimatedCost:row.estimated_cost===null?null:Number(row.estimated_cost), actualCost:row.actual_cost===null?null:Number(row.actual_cost), notes:row.notes, addressSnapshot:row.address_snapshot, paymentStatus:row.payment_status, paymentApprovedBy:row.payment_approved_by, paymentApprovedAt:row.payment_approved_at, paidAt:row.paid_at, createdBy:row.created_by, createdAt:row.created_at, updatedAt:row.updated_at }));
   const contractors: Contractor[] = (contractorResult.data ?? []).map(row => ({id:row.id,companyName:row.company_name,contactName:row.contact_name,email:row.email,phone:row.phone,trade:row.trade,companyRegistration:row.company_registration,vatNumber:row.vat_number,status:row.status,expiryPauseReason:row.expiry_pause_reason,notes:row.notes,createdAt:row.created_at,updatedAt:row.updated_at}));

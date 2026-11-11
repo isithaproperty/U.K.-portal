@@ -2,9 +2,7 @@ import { parse } from "csv-parse/sync";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../../lib/supabase/server";
 
-type ImportRow = { unit_number: string; resident_name: string; resident_email: string; phone: string;payment_reference:string };
-const legacyHeaders = ["unit_number", "resident_name", "resident_email", "phone"];
-const headers=[...legacyHeaders,"payment_reference"];
+import {residentCsvRows, residentFields as headers, resolveResidentUnits, type ResidentImportRow as ImportRow} from "../../../../../lib/resident-import";
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: NextRequest, context: { params: Promise<{ blockId: string }> }) {
@@ -26,12 +24,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bl
       const body = await request.text();
       if (new TextEncoder().encode(body).length > 1_000_000) throw new Error("File exceeds 1 MB.");
       const records = parse(body, { bom: true, skip_empty_lines: true, trim: true, max_record_size: 20_000 }) as string[][];
-      const columns=records[0]?.map(value=>value.toLowerCase());
-      if(columns?.join(",")!==headers.join(",")&&columns?.join(",")!==legacyHeaders.join(","))throw new Error("Use the resident CSV template, including the optional payment_reference column.");
-      rows = records.slice(1).map((values) => {
-        if (values.length !== columns.length) throw new Error("Each row must match the template columns.");
-        return Object.fromEntries(headers.map((key, index) => [key, values[index]??""])) as ImportRow;
-      });
+      rows = residentCsvRows(records);
     } else {
       const body = await request.json();
       rows = body.rows;
@@ -40,7 +33,9 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bl
     const references=new Map<string,string>();
     rows = rows.map((row, index) => {
       if (!row || typeof row !== "object") throw new Error(`Row ${index + 1}: invalid data.`);
+      if(row.service_charge_percentage!=null&&typeof row.service_charge_percentage!=="string")throw new Error(`Row ${index+1}: percentage must be a decimal string.`);
       const values = Object.fromEntries(headers.map(key => [key, typeof row[key as keyof ImportRow] === "string" ? row[key as keyof ImportRow].trim() : ""])) as ImportRow;
+      if(values.unit_code.length>80)throw new Error(`Row ${index+1}: unit code is too long.`);
       values.resident_email = values.resident_email.toLowerCase();
       if (!values.unit_number || values.unit_number.length > 80) throw new Error(`Row ${index + 1}: unit number is required (max 80 characters).`);
       if (values.resident_email && (!emailPattern.test(values.resident_email) || !values.resident_name)) throw new Error(`Row ${index + 1}: enter a valid resident email and name.`);
@@ -53,10 +48,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ bl
       if(values.payment_reference)references.set(values.unit_number,values.payment_reference);
       return values;
     });
+    const {data:existingUnits,error:unitsError}=await supabase.from("units").select("unit_number").eq("block_id",blockId);
+    if(unitsError)throw new Error("Could not verify this building’s units. Nothing was imported.");
+    rows=resolveResidentUnits(rows,existingUnits??[]);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid import." }, { status: 400 });
   }
-  const { data, error } = await supabase.rpc("import_block_residents", { p_block_id: blockId, p_rows: rows });
-  if (error) return NextResponse.json({ error: "Import failed. No rows were saved." }, { status: 400 });
+  const { data, error } = await supabase.rpc(rows.some(row=>row.service_charge_percentage)?"import_block_residents_with_shares":"import_block_residents", { p_block_id: blockId, p_rows: rows });
+  if (error) return NextResponse.json({ error: rows.some(row=>row.service_charge_percentage)?"Import failed. No rows were saved. Check that the unit apportionment migration is installed and the unit labels and shares are valid.":"Import failed. No rows were saved." }, { status: 400 });
   return NextResponse.json({ imported: data });
 }

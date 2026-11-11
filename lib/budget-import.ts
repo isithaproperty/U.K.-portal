@@ -108,3 +108,8 @@ export function reconcileShares(rows:{unitId:number;percentage:string}[]):{perce
  for(const row of [...apportioned].sort((a,b)=>a.remainder===b.remainder?a.unitId-b.unitId:a.remainder>b.remainder?-1:1)){if(remaining--<=0n)break;row.ticks++;}
  return {percentages:Object.fromEntries(apportioned.map(row=>[row.unitId,`${row.ticks/10000n}.${(row.ticks%10000n).toString().padStart(4,"0")}`])),sourceTotal:decimal(sum),adjusted:apportioned.some(row=>row.ticks*100000000n!==row.weight)};
 }
+
+/** Supabase numeric JSON may use exponent notation for very small percentages. */
+export function sourcePercentageString(value:string|number|null|undefined):string|null{
+ return value==null?null:typeof value==="number"?value.toFixed(12):value;
+}
