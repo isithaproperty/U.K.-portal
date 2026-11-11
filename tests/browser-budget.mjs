@@ -14,6 +14,7 @@ async function setLabel(label,value){await evaluate(`(()=>{const l=[...document.
 await call('Runtime.enable');await call('Network.enable');await call('Page.enable');await call('Page.navigate',{url:'http://127.0.0.1:3012/review'});await waitFor(`document.body?.innerText.includes('Import budget for')`);
 async function upload(index,name,text){await evaluate(`(()=>{const inputs=document.querySelectorAll('input[type=file]'); const dt=new DataTransfer();dt.items.add(new File([${JSON.stringify(text)}],${JSON.stringify(name)},{type:'text/csv'}));inputs[${index}].files=dt.files;inputs[${index}].dispatchEvent(new Event('change',{bubbles:true}));})()`);await new Promise(r=>setTimeout(r,150));}
 await upload(0,'budget.csv','Block Name,Example building\nFrom,2026-10-01\nTo,2027-09-30\nCategoryName,Budget 2025,Budget 2026\nInsurance,500,1000\nCleaning,500,2000\n,1000,3000');
+await waitFor(`document.body.innerText.includes('Read budget.csv successfully in this browser.')`);
 await setLabel('Annual budget column','2');await setLabel('Confirmed start date','2026-10-01');await waitFor(`document.body.innerText.includes('£3,000.00')`);
 await upload(1,'shares.csv','Unit Code,Unit Name,Service Charge (Percentage)\nA,Flat 1,50\nB,Flat 2,30\nC,Flat 3,20');
 await waitFor(`document.body.innerText.includes('Annual allocation preview')`);
@@ -24,11 +25,12 @@ await setLabel('Payment due date','2026-12-25');
 await evaluate(`Array.from(document.querySelectorAll('label')).find(l=>l.textContent.includes('Confirm')&&l.querySelector('input[type=checkbox]'))?.querySelector('input').click()`);
 assert.equal(requests.some(r=>r.method==='POST'||r.method==='PUT'),false);
 await button('Clear import preview');assert.equal(await evaluate(`document.body.innerText.includes('Annual allocation preview')`),false);
-await upload(0,'wrong.xlsx','bad');await waitFor(`document.body.innerText.includes('Invalid XLSX ZIP container')`);
+await upload(0,'wrong.xlsx','bad');await waitFor(`document.body.innerText.includes('Could not read wrong.xlsx: Invalid XLSX ZIP container')`);
 await button('Clear import preview');
 const xlsx=Buffer.from(fixture()).toString('base64');
 await evaluate(`(()=>{const dt=new DataTransfer();dt.items.add(new File([Uint8Array.from(atob(${JSON.stringify(xlsx)}),c=>c.charCodeAt(0))],'synthetic.xlsx'));const el=document.querySelector('input[type=file]');el.files=dt.files;el.dispatchEvent(new Event('change',{bubbles:true}));})()`);
 await waitFor(`document.body.innerText.includes('Budget worksheet')`);
+await waitFor(`document.body.innerText.includes('Read synthetic.xlsx successfully in this browser. Next: choose the budget worksheet below.')`);
 assert.equal(await evaluate(`document.body.innerText.includes('Budget categories to include')`),false);
 await setLabel('Budget worksheet','1');await waitFor(`document.body.innerText.includes('Choose a Summary worksheet')`);
 await setLabel('Budget worksheet','0');await setLabel('Annual budget column','1');

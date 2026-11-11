@@ -1,4 +1,5 @@
 "use client";
+import {financialSaveLabel,financialSaveMessage} from "../lib/financial-save-status";
 import type {RecipientBudgetSummary} from "../lib/recipient-budget";
 import BudgetCsvImport from "./BudgetCsvImport";
 import {useEffect,useMemo,useRef,useState} from "react";
@@ -59,7 +60,7 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
    if(response.status===409){setConflict(true);throw new Error("Another manager has saved changes. Export your prepared batch if needed, then reload the saved version before saving again.");}
    if(!response.ok)throw new Error(result.error||"Financial preparation was not saved.");
    if(!Number.isInteger(result.revision)||result.revision<=revision)throw new Error("Save outcome could not be verified. Reload the saved version before trying again.");
-   setDocuments([]);setRevision(result.revision);setSavedBatchId(prepared?.input.batchId??null);setStorageStatus(`Budget and prepared batch saved (revision ${result.revision}). No ledger entries or emails were created.`);
+   setDocuments([]);setRevision(result.revision);setSavedBatchId(prepared?.input.batchId??null);setStorageStatus(financialSaveMessage(state,result.revision));
   }catch(cause){setStorageStatus(cause instanceof Error?cause.message:"Financial preparation was not saved.");}
   finally{saveLock.current=false;setSaving(false);}
  }
@@ -128,7 +129,8 @@ export default function FinancialPlanning({blocks,units,today,reviewOnly=false,c
  return <section className="panel tenant-card tenant-form">
   <div className="panel-head"><div><p className="eyebrow">FINANCIAL PREPARATION · REVIEW VERSION</p><h2>Lease budgets & bulk batches</h2></div></div>
   <p>Prepare lease schedule allocations and a bulk demand or surplus credit batch. Save the budget and prepared batch explicitly to retain them for this block; unsaved changes are lost when leaving or refreshing. Ledger posting requires an explicitly approved saved batch and enabled posting access. No email sending or automatic scheduling is activated here.</p>
-  <div><button className="unit-secondary" disabled={reviewOnly||loading||saving||posting||generatingDocuments||!persistenceReady||conflict} onClick={()=>void savePreparation()}>{saving?"Saving…":"Save budget & prepared batch"}</button> <button className="unit-secondary" disabled={reviewOnly||loading||saving||posting||generatingDocuments||!blockId} onClick={()=>{if(confirm("Reload the saved financial preparation? Unsaved changes will be discarded."))setReload(current=>current+1);}}>Reload saved version</button></div>
+  <div><button className="unit-secondary" disabled={reviewOnly||loading||saving||posting||generatingDocuments||!persistenceReady||conflict} onClick={()=>void savePreparation()}>{saving?"Saving…":financialSaveLabel({prepared})}</button> <button className="unit-secondary" disabled={reviewOnly||loading||saving||posting||generatingDocuments||!blockId} onClick={()=>{if(confirm("Reload the saved financial preparation? Unsaved changes will be discarded."))setReload(current=>current+1);}}>Reload saved version</button></div>
+  <p>If importing a file, first select its budget year (and worksheet for Excel), review the figures and shares, then choose “Use reviewed annual budget”. Saving this preparation does not apply an import preview. Preparing a demand batch is a separate step below.</p>
   {storageStatus&&<p className="unit-message" role="status">{storageStatus}</p>}
   <fieldset disabled={loading||saving||posting||generatingDocuments} style={{border:0,padding:0,margin:0,minWidth:0}}>
   <div className="unit-select">

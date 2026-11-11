@@ -26,3 +26,12 @@ test('category errors and missing category formula caches cannot become imported
   assert.throws(()=>buildBudgetPreview(inspectBudgetRows(w.sheets[0].rows),1),/Excel errors/);
  }
 });
+test('missing or raw-deflate-unsupported browser receives actionable guidance, never a raw constructor error',async()=>{
+ const original=globalThis.DecompressionStream;
+ try{
+  globalThis.DecompressionStream=undefined;
+  await assert.rejects(()=>parseBudgetWorkbook(fixture()),/up-to-date browser or export Summary as CSV/);
+  globalThis.DecompressionStream=class {constructor(){throw new TypeError('unsupported format')}};
+  await assert.rejects(()=>parseBudgetWorkbook(fixture()),/cannot read compressed XLSX files/);
+ }finally{globalThis.DecompressionStream=original;}
+});

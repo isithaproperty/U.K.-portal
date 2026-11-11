@@ -28,7 +28,7 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
   const shareStatus=useMemo(()=>{
     if(!visibleUnits.length)return "Add units before importing a budget.";
     if(visibleUnits.some(unit=>unit.serviceChargePercentage==null))return "Incomplete apportionments: automatic budget allocation is blocked until every unit has a share, including 0% for exclusions.";
-    try{const result=reconcileShares(visibleUnits.map(unit=>({unitId:unit.id,percentage:unit.serviceChargePercentage!})));return `Source total ${result.sourceTotal}%. ${result.adjusted?"Budget previews will require approval of rounding reconciliation to exactly 100%.":"Ready for budget allocation preview."}`;}catch(error){return `Automatic budget allocation blocked: ${(error as Error).message}`;}
+    try{const result=reconcileShares(visibleUnits.map(unit=>({unitId:unit.id,percentage:unit.serviceChargePercentage!})));return `Source total ${result.sourceTotal}%. ${result.adjusted?"Small rounding difference accepted; budget previews show effective shares totaling exactly 100% for review.":"Ready for budget allocation preview."}`;}catch(error){return `Automatic budget allocation blocked: ${(error as Error).message}`;}
   },[visibleUnits]);
   const byUnit = useMemo(() => {
     const map = new Map<number, Resident[]>();

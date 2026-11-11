@@ -47,3 +47,32 @@ test('saved numeric JSON percentages retain tiny decimals without exponent notat
  const result=reconcileShares([{unitId:1,percentage:sourcePercentageString(1e-12)},{unitId:2,percentage:'99.999999999999'}]);
  assert.equal(result.sourceTotal,'100');
 });
+
+test('rounding tolerance includes its exact boundaries and rejects genuine excess or shortage',()=>{
+ for(const percentage of ['50.001','49.999']){
+  const result=reconcileShares([{unitId:1,percentage:'50'},{unitId:2,percentage}]);
+  assert.equal(Object.values(result.percentages).reduce((sum,value)=>sum+Math.round(Number(value)*10000),0),1000000);
+  assert.equal(result.adjusted,true);
+ }
+ for(const percentage of ['50.001000000001','49.998999999999','50.01','49.99']){
+  assert.throws(()=>reconcileShares([{unitId:1,percentage:'50'},{unitId:2,percentage}]),/rounding tolerance/);
+ }
+});
+
+test('100.00004 percent import passes the strict annual-demand engine without losing or adding pennies',async()=>{
+ const {apportionLeaseBudget,prepareFinancialDraft}=await import('../lib/financial-planning.ts');
+ const rows=Array.from({length:14},(_,i)=>({unitId:i+1,percentage:'7.14286'}));
+ const normalized=reconcileShares(rows);
+ assert.equal(normalized.sourceTotal,'100.00004');
+ const shares=rows.map(({unitId})=>({unitId,percentage:normalized.percentages[unitId]}));
+ for(const totalPence of [1,1234567,999999999]){
+  const allocations=apportionLeaseBudget(totalPence,shares);
+  assert.equal(allocations.reduce((sum,row)=>sum+row.amountPence,0),totalPence);
+ }
+ const totalPence=1234567;
+ const input={batchId:'import-budget:1:2027-01-01',blockId:1,kind:'Demand',preparedDate:'2026-12-01',issueDate:'2026-12-01',dueDate:'2027-01-01',issueMode:'Issue now, future due date',frequency:'Annual',yearStart:'2027-01-01',periodIndex:0,schedules:[{id:'import-budget:1:2027-01-01',name:'Synthetic annual budget',annualPence:totalPence,shares}]};
+ const demand=prepareFinancialDraft(input);
+ assert.equal(demand.length,14);
+ assert.equal(demand.reduce((sum,row)=>sum+row.amountPence,0),totalPence);
+ assert.throws(()=>reconcileShares(rows.slice(0,13)),/rounding tolerance/);
+});

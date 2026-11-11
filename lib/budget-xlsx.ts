@@ -30,7 +30,9 @@ async function unzip(buffer:ArrayBuffer){
   if(method===0){if(compressed!==size)fail('Invalid stored workbook entry.');output=bytes.slice(data,finish);}
   else{
    if(typeof DecompressionStream==='undefined')fail('This browser cannot read XLSX. Use an up-to-date browser or export Summary as CSV.');
-   const stream=new Blob([bytes.slice(data,finish)]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+   let decompressor:DecompressionStream;
+   try{decompressor=new DecompressionStream('deflate-raw');}catch{fail('This browser cannot read compressed XLSX files. Use an up-to-date browser or export Summary as CSV.');}
+   const stream=new Blob([bytes.slice(data,finish)]).stream().pipeThrough(decompressor);
    const reader=stream.getReader();output=new Uint8Array(size);let used=0;
    try{while(true){const chunk=await reader.read();if(chunk.done)break;if(used+chunk.value.length>size){await reader.cancel();fail('Workbook expanded data exceeds its declared size.');}output.set(chunk.value,used);used+=chunk.value.length;}if(used!==size)fail('Truncated workbook data.');}finally{reader.releaseLock();}
   }
