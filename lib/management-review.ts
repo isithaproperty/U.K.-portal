@@ -1,9 +1,10 @@
+import {validateBudgetSpendState} from "./budget-spend.ts";
 import {validateFinancialState} from "./financial-planning.ts";
 import {validateDebtorState} from "./debtors.ts";
 import {validateLeaseholderState} from "./leaseholder-planning.ts";
 import {validateCreditorState} from "./creditors.ts";
 import type {WorkOrder} from "../app/types";
-export const reviewAreas=["financials","leaseholders","debtors","creditors"] as const;
+export const reviewAreas=["financials","leaseholders","debtors","creditors","budget-spend"] as const;
 export type ReviewArea=typeof reviewAreas[number];
 export function isReviewArea(value:string):value is ReviewArea{return (reviewAreas as readonly string[]).includes(value);}
 export function canManageReviewBlock(member:{role:string;portfolio_manager:string|null}|null,manager:string){
@@ -18,6 +19,7 @@ export function validateReviewWrite(body:unknown){
 }
 export function validateReviewState(area:ReviewArea,state:unknown,blockId:number,unitIds:number[],today:string,orders:WorkOrder[]=[]){
  switch(area){
+ case "budget-spend":return validateBudgetSpendState(state,blockId,orders);
  case "financials":return validateFinancialState(state,blockId,unitIds,today);
  case "leaseholders":return validateLeaseholderState(state,blockId,unitIds,today);
  case "debtors":return validateDebtorState(state,blockId,unitIds,today);

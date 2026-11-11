@@ -50,7 +50,7 @@ function BlockCreditorRegister({ blocks, workOrders, contractors, today, blockId
       const response=await fetch(`/api/blocks/${blockId}/supplier-settlements`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(settlementRequest.current)});
       const result=await response.json();
       if(!response.ok){if(result.uncertain)setUncertain(true);else{settlementRequest.current=null;setUncertain(false);}throw new Error(result.error||"Settlement was not confirmed.");}
-      settlementRequest.current=null;setUncertain(false);setMessage("Actual settlement recorded. Work-order Paid status is synchronized only when all saved linked invoices are settled and match its approved actual cost.");setPaymentAmount("");setBankReference("");setEvidence("");setConfirmed(false);setReload(value=>value+1);router.refresh();
+      settlementRequest.current=null;setUncertain(false);setMessage("Actual settlement recorded. Ongoing works remain open; each invoice shows its own payment status. One-off work orders become Paid only when all saved invoices are settled and match the approved actual cost.");setPaymentAmount("");setBankReference("");setEvidence("");setConfirmed(false);setReload(value=>value+1);router.refresh();
     }catch(error){if(settlementRequest.current)setUncertain(true);setMessage(error instanceof Error?error.message:"Settlement outcome is uncertain. Reload saved history before retrying the same request.");}
     finally{setSettlementSaving(false);}
   }
@@ -124,7 +124,7 @@ function BlockCreditorRegister({ blocks, workOrders, contractors, today, blockId
         <button className="primary" disabled={!order?.contractorId}>Add to review register</button>
       </form></section>
       <section className="panel tenant-card tenant-form"><h2>{reviewOnly?"Review a recorded payment":"Record actual supplier settlement"}</h2><p>Use a uniquely identified actual bank transaction. Approval or a planned payment does not mean paid.</p>
-      {!reviewOnly&&<><p>Only the portfolio owner may confirm payments. Save invoice edits before allocating a settlement. Linked invoices must total the approved actual work-order cost before its status becomes Paid.</p>{settlementLoading&&<p role="status">Loading actual settlement history…</p>}{settlementError&&<p role="alert">{settlementError}</p>}{dirty&&<p>Save or reload invoice edits before recording payment.</p>}{uncertain&&<p role="alert">The last outcome is uncertain. Reload saved history first. A retry reuses the exact request and bank transaction identifier.</p>}</>}
+      {!reviewOnly&&<><p>Only the portfolio owner may confirm payments. Save invoice edits before allocating a settlement. Ongoing works stay open across invoices and payments until explicitly closed. Their payment status is tracked per invoice. One-off linked invoices must total the approved actual cost before the work order becomes Paid.</p>{settlementLoading&&<p role="status">Loading actual settlement history…</p>}{settlementError&&<p role="alert">{settlementError}</p>}{dirty&&<p>Save or reload invoice edits before recording payment.</p>}{uncertain&&<p role="alert">The last outcome is uncertain. Reload saved history first. A retry reuses the exact request and bank transaction identifier.</p>}</>}
       <form onSubmit={event => {
         event.preventDefault();
         if(!reviewOnly){void recordActualSettlement();return;}

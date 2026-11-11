@@ -1,3 +1,4 @@
+import {budgetSpendCategories,type BudgetSpendState} from "../../../../../../lib/budget-spend";
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "../../../../../../lib/supabase/server";
 import {isReviewArea,canManageReviewBlock,validateReviewState,validateReviewWrite} from "../../../../../../lib/management-review";
@@ -32,13 +33,25 @@ export async function PUT(request:NextRequest,context:Context){
  const {data:units,error:unitError}=await client.from("units").select("id").eq("block_id",blockId);
  if(unitError)return reply({error:"Unit scope could not be verified."},503);
  let orders:WorkOrder[]=[];
- if(area==="creditors"){
-  const {data,error}=await client.from("work_orders").select("id,block_id,unit_id,contractor_id,title,contractor").eq("block_id",blockId);
-  if(error)return reply({error:"Work order scope could not be verified."},503);
-  orders=(data??[]).map(row=>({id:row.id,blockId:row.block_id,unitId:row.unit_id,contractorId:row.contractor_id,title:row.title,contractor:row.contractor})) as WorkOrder[];
+ if(area==="creditors"||area==="budget-spend"){
+  const seen=new Set<number>();let expected:number|null=null;
+  for(let from=0;;from+=1000){
+   const {data,error,count}=await client.from("work_orders").select("id,block_id,unit_id,contractor_id,title,contractor",{count:"exact"}).eq("block_id",blockId).order("id").range(from,from+999);
+   if(error||!data||!Number.isSafeInteger(count)||count===null||count<0||count>100000||expected!==null&&count!==expected||data.length!==Math.min(1000,Math.max(0,count-from)))return reply({error:"Complete work order scope could not be verified. Reload before saving."},503);
+   expected=count;
+   for(const row of data){if(seen.has(row.id))return reply({error:"Work orders changed while loading. Reload before saving."},409);seen.add(row.id);orders.push({id:row.id,blockId:row.block_id,unitId:row.unit_id,contractorId:row.contractor_id,title:row.title,contractor:row.contractor} as WorkOrder);}
+   if(orders.length===count)break;
+  }
  }
  let state;
  try{state=validateReviewState(area,body.state,blockId,(units??[]).map(unit=>unit.id),londonDate(),orders);}catch(error){return reply({error:error instanceof Error?error.message:"Review data failed validation."},400);}
+ if(area==="budget-spend"){
+  const financial=await client.from("management_review_state").select("state").eq("block_id",blockId).eq("area","financials").maybeSingle();
+  if(financial.error)return reply({error:"Current budget could not be verified. No assignments saved."},503);
+  try{const budget=budgetSpendCategories(financial.data?.state,blockId),assignments=state as BudgetSpendState,ids=new Set(budget.categories.map(category=>category.id));
+   if(assignments.yearStart!==budget.yearStart||assignments.assignments.some(item=>!ids.has(item.categoryId)))return reply({error:"Budget changed. Reload and review category assignments before saving."},409);
+  }catch{return reply({error:"A complete saved annual budget is required before saving category assignments."},409);}
+ }
  const {data,error}=await client.rpc("save_management_review",{p_block_id:blockId,p_area:area,p_state:state,p_expected_revision:body.revision});
  if(error){if(error.code==="40001"||error.code==="23505")return reply({error:"Another manager saved a newer revision. Export your changes, then reload before saving."},409);if(error.code==="42501")return reply({error:"Manager access to this block is required."},403);return reply({error:"Review storage unavailable. No save was confirmed; reload before retrying."},503);}
  const row=Array.isArray(data)?data[0]:data;
