@@ -9,7 +9,7 @@ export type BuildingStatementInput={blockId:number;start:string;end:string;units
 export type StatementResidentAccount={unitId:number;unitNumber:string;openingPence:number;chargesPence:number;paymentsPence:number;creditsPence:number;closingPence:number;outstandingPence:number;creditBalancePence:number;overduePence:number};
 export type BuildingStatement={
  blockId:number;start:string;end:string;
- workOrders:(WorkOrder&{estimatedPence:number|null;actualPence:number|null})[];
+ workOrders:(WorkOrder&{estimatedPence:number|null;actualPence:number|null;paidPence:number|null;unpaidPence:number|null;invoicePaymentStatus:"No invoice recorded"|"Unpaid"|"Part paid"|"Paid"})[];
  invoices:(SupplierInvoice&{inPeriod:boolean;paidPence:number;outstandingPence:number})[];
  residentAccounts:StatementResidentAccount[];
  totals:{workOrderCount:number;estimatedPence:number;actualPence:number;missingEstimateCount:number;missingActualCount:number;invoicedPence:number;supplierPaymentsPence:number;openingSupplierDebtPence:number;closingSupplierDebtPence:number;residentOpeningPence:number;residentChargesPence:number;residentPaymentsPence:number;residentCreditsPence:number;residentClosingPence:number;residentOutstandingPence:number;residentCreditBalancesPence:number;residentOverduePence:number};
@@ -61,15 +61,30 @@ export function buildBuildingStatement(input:BuildingStatementInput):BuildingSta
   return {unitId:unit.id,unitNumber:unit.unitNumber,openingPence,chargesPence:sum(period.filter(row=>row.entry_type==="Charge").map(row=>row.amount_pence)),paymentsPence:sum(period.filter(row=>row.entry_type==="Payment").map(row=>row.amount_pence)),creditsPence:sum(period.filter(row=>row.entry_type==="Credit").map(row=>row.amount_pence)),closingPence:closing.balance,outstandingPence:Math.max(0,closing.balance),creditBalancePence:Math.max(0,-closing.balance),overduePence:closing.days1to30+closing.days31to60+closing.days61to90+closing.days91plus};
  });
  const residentTotal=(key:keyof Omit<StatementResidentAccount,"unitId"|"unitNumber">)=>sum(residentAccounts.map(row=>row[key]));
- return {blockId,start,end,workOrders,invoices,residentAccounts,warnings,totals:{workOrderCount:workOrders.length,estimatedPence:sum(workOrders.map(row=>row.estimatedPence??0)),actualPence:sum(workOrders.map(row=>row.actualPence??0)),missingEstimateCount:workOrders.filter(row=>row.estimatedPence===null).length,missingActualCount:workOrders.filter(row=>row.actualPence===null).length,invoicedPence:sum(invoices.filter(row=>row.inPeriod).map(row=>row.amountPence)),supplierPaymentsPence:sum(validAllocations.filter(row=>within(row.paymentDate)).map(row=>row.amount_pence)),openingSupplierDebtPence,closingSupplierDebtPence:sum(invoices.map(row=>row.outstandingPence)),residentOpeningPence:residentTotal("openingPence"),residentChargesPence:residentTotal("chargesPence"),residentPaymentsPence:residentTotal("paymentsPence"),residentCreditsPence:residentTotal("creditsPence"),residentClosingPence:residentTotal("closingPence"),residentOutstandingPence:residentTotal("outstandingPence"),residentCreditBalancesPence:residentTotal("creditBalancePence"),residentOverduePence:residentTotal("overduePence")}};
+ return {blockId,start,end,workOrders:workOrders.map(order=>{
+  const linked=invoices.filter(invoice=>invoice.workOrderId===order.id);
+  const paidPence=linked.length?sum(linked.map(invoice=>invoice.paidPence)):null;
+  const unpaidPence=linked.length?sum(linked.map(invoice=>invoice.outstandingPence)):null;
+  const invoicePaymentStatus=paidPence===null?"No invoice recorded":unpaidPence===0?"Paid":paidPence>0?"Part paid":"Unpaid";
+  return {...order,paidPence,unpaidPence,invoicePaymentStatus};
+ }),invoices,residentAccounts,warnings,totals:{workOrderCount:workOrders.length,estimatedPence:sum(workOrders.map(row=>row.estimatedPence??0)),actualPence:sum(workOrders.map(row=>row.actualPence??0)),missingEstimateCount:workOrders.filter(row=>row.estimatedPence===null).length,missingActualCount:workOrders.filter(row=>row.actualPence===null).length,invoicedPence:sum(invoices.filter(row=>row.inPeriod).map(row=>row.amountPence)),supplierPaymentsPence:sum(validAllocations.filter(row=>within(row.paymentDate)).map(row=>row.amount_pence)),openingSupplierDebtPence,closingSupplierDebtPence:sum(invoices.map(row=>row.outstandingPence)),residentOpeningPence:residentTotal("openingPence"),residentChargesPence:residentTotal("chargesPence"),residentPaymentsPence:residentTotal("paymentsPence"),residentCreditsPence:residentTotal("creditsPence"),residentClosingPence:residentTotal("closingPence"),residentOutstandingPence:residentTotal("outstandingPence"),residentCreditBalancesPence:residentTotal("creditBalancePence"),residentOverduePence:residentTotal("overduePence")}};
 }
 /** Text fields are escaped and formula-neutralized for spreadsheet applications. Amounts are GBP. */
 export function statementCsv(statement:BuildingStatement):string{
- const rows:(string|number|null)[][]=[["Building financial statement","Building ID",statement.blockId],["From",statement.start,"To",statement.end],["Basis","Recorded data only. WO costs are not cash spend. Unmatched bank rows do not settle debts."],["Summary","Amount GBP"]];
- for(const [key,value] of Object.entries(statement.totals))rows.push([key,key.endsWith("Pence")?(value/100).toFixed(2):value]);
- rows.push([], ["Work orders raised in period"],["Number","Raised","Title","Status","Estimated GBP","Actual recorded cost GBP"]);
- for(const row of statement.workOrders)rows.push([row.workOrderNumber,row.createdAt.slice(0,10),row.title,row.status,row.estimatedPence===null?"Unknown":(row.estimatedPence/100).toFixed(2),row.actualPence===null?"Unknown":(row.actualPence/100).toFixed(2)]);
- rows.push([], ["Supplier invoices through statement end"],["Invoice","Work order ID","Invoice date","Issued in period","Amount GBP","Verified paid GBP","Outstanding GBP"]);
+ const rows:(string|number|null)[][]=[["Building financial statement","Building ID",statement.blockId],["From",statement.start,"To",statement.end],["Basis","Recorded data only. WO costs are not cash spend. Unmatched bank rows do not settle debts."],["Summary","Value"]];
+ const labels:Record<keyof BuildingStatement["totals"],string>={
+  workOrderCount:"Work orders raised (count)",estimatedPence:"Estimated WO costs GBP",actualPence:"Recorded actual WO costs GBP",
+  missingEstimateCount:"Work orders missing estimate (count)",missingActualCount:"Work orders missing actual cost (count)",
+  invoicedPence:"Supplier invoices in period GBP",supplierPaymentsPence:"Verified supplier payments GBP",
+  openingSupplierDebtPence:"Opening supplier amount outstanding GBP",closingSupplierDebtPence:"Closing supplier amount outstanding GBP",
+  residentOpeningPence:"Resident opening balance GBP",residentChargesPence:"Resident charges GBP",residentPaymentsPence:"Resident payments GBP",
+  residentCreditsPence:"Resident credits GBP",residentClosingPence:"Resident closing balance GBP",residentOutstandingPence:"Resident outstanding GBP",
+  residentCreditBalancesPence:"Resident credit balances GBP",residentOverduePence:"Resident overdue GBP"
+ };
+ for(const key of Object.keys(statement.totals) as (keyof BuildingStatement["totals"])[]){const value=statement.totals[key];rows.push([labels[key],key.endsWith("Pence")?(value/100).toFixed(2):value]);}
+ rows.push([], ["Work orders raised in period"],["Number","Raised","Title","Status","Estimated GBP","Actual recorded cost GBP","Paid GBP (linked invoices)","Unpaid GBP (linked invoices)","Invoice payment status"]);
+ for(const row of statement.workOrders)rows.push([row.workOrderNumber,row.createdAt.slice(0,10),row.title,row.status,row.estimatedPence===null?"Unknown":(row.estimatedPence/100).toFixed(2),row.actualPence===null?"Unknown":(row.actualPence/100).toFixed(2),row.paidPence===null?"Not recorded":(row.paidPence/100).toFixed(2),row.unpaidPence===null?"Not recorded":(row.unpaidPence/100).toFixed(2),row.invoicePaymentStatus]);
+ rows.push([], ["Supplier invoices through statement end"],["Invoice","Work order ID","Invoice date","Issued in period","Amount GBP","Paid GBP (verified)","Unpaid GBP"]);
  for(const row of statement.invoices)rows.push([row.number,row.workOrderId,row.invoiceDate,row.inPeriod?"Yes":"No",(row.amountPence/100).toFixed(2),(row.paidPence/100).toFixed(2),(row.outstandingPence/100).toFixed(2)]);
  rows.push([], ["Resident unit accounts"],["Unit","Opening GBP","Charges GBP","Payments GBP","Credits GBP","Closing GBP","Outstanding GBP","Credit balance GBP","Overdue GBP"]);
  for(const row of statement.residentAccounts)rows.push([row.unitNumber,...[row.openingPence,row.chargesPence,row.paymentsPence,row.creditsPence,row.closingPence,row.outstandingPence,row.creditBalancePence,row.overduePence].map(value=>(value/100).toFixed(2))]);

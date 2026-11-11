@@ -35,3 +35,33 @@ test('CSV includes detail sections and neutralizes formula-injection text',()=>{
  const data=input();data.workOrders[0].title=' =HYPERLINK("bad")';data.units[0].unitNumber='@SUM(1,2)';const csv=statementCsv(buildBuildingStatement(data));
  assert.match(csv,/Supplier invoices through statement end/);assert.match(csv,/Resident unit accounts/);assert.match(csv,/' =HYPERLINK/);assert.match(csv,/'@SUM/);assert.match(csv,/Actual recorded cost GBP/);
 });
+
+test('CSV summary labels distinguish GBP amounts from counts without changing values',()=>{
+ const csv=statementCsv(buildBuildingStatement(input()));
+ assert.match(csv,/"Summary","Value"/);
+ assert.match(csv,/"Estimated WO costs GBP","100.00"/);
+ assert.match(csv,/"Recorded actual WO costs GBP","80.00"/);
+ assert.match(csv,/"Verified supplier payments GBP","30.00"/);
+ assert.match(csv,/"Work orders raised \(count\)","1"/);
+ assert.match(csv,/"Work orders missing actual cost \(count\)","0"/);
+ assert.doesNotMatch(csv,/Pence/);
+});
+
+test('WO paid/unpaid columns aggregate verified invoice settlements, including partial payment, not legacy Paid flags',()=>{
+ const data=input();data.workOrders.push(wo(4));
+ let result=buildBuildingStatement(data);
+ assert.equal(result.workOrders.find(row=>row.id===1).invoicePaymentStatus,'Unpaid');
+ assert.equal(result.workOrders.find(row=>row.id===1).paidPence,0);
+ assert.equal(result.workOrders.find(row=>row.id===1).unpaidPence,10000);
+ assert.equal(result.workOrders.find(row=>row.id===4).paidPence,null);
+ assert.equal(result.workOrders.find(row=>row.id===4).invoicePaymentStatus,'No invoice recorded');
+ data.settlements.push(settlement('partial','2026-05-01',4000));
+ data.allocations.push(alloc('partial','new',4000,1));
+ result=buildBuildingStatement(data);
+ assert.equal(result.workOrders[0].paidPence,4000);assert.equal(result.workOrders[0].unpaidPence,6000);
+ assert.equal(result.workOrders[0].invoicePaymentStatus,'Part paid');
+ data.settlements.push(settlement('rest','2026-06-01',6000));data.allocations.push(alloc('rest','new',6000,1));
+ result=buildBuildingStatement(data);assert.equal(result.workOrders[0].invoicePaymentStatus,'Paid');
+ assert.equal(result.workOrders[0].unpaidPence,0);
+ assert.match(statementCsv(result),/"Paid GBP \(linked invoices\)"/);
+});
