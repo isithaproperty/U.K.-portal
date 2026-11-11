@@ -9,6 +9,15 @@ export async function proxy(request: NextRequest) {
     if(decision==="redirect")return NextResponse.redirect(new URL("/review",request.url));
     return NextResponse.next({request});
   }
+  // Recovery must not refresh or overwrite a normal portal session. Never cache
+  // credential-bearing pages; suppress referrers before any client code runs.
+  if (request.nextUrl.pathname.startsWith("/auth/recovery/") || request.nextUrl.pathname === "/reset-password" || request.nextUrl.pathname === "/forgot-password") {
+    const response = NextResponse.next({ request });
+    response.headers.set("Cache-Control", "private, no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return NextResponse.next({ request });
