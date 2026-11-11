@@ -3,3 +3,12 @@ export const standardPaymentTerms="Pursuant to the Section 48(1) of the Landlord
 export type ChargeDocumentSettings={noticeAddress:string;agentAddress:string;bankName:string;accountName:string;sortCode:string;accountNumber:string;paymentText:string};
 export const blankDocumentSettings:ChargeDocumentSettings={noticeAddress:section48NoticeAddress,agentAddress:"",bankName:"",accountName:"",sortCode:"",accountNumber:"",paymentText:standardPaymentTerms};
 export const documentFields:[keyof ChargeDocumentSettings,string][]=[["agentAddress","Managing agent address"],["bankName","Bank name"],["accountName","Account name"],["sortCode","Sort code"],["accountNumber","Account number"],["paymentText","Payment instructions / terms"]];
+
+/** Statement guidance only; never invents a payment deadline or changes ledger data. */
+export function statementPaymentMessage(balance:number,due:number,ready:boolean,paymentTerms:string):string{
+ if(balance<0)return "Your account is in credit based on the recorded entries. No payment is currently due.";
+ if(balance===0)return "Your account balance is zero based on the recorded entries. No payment is currently due.";
+ if(due<=0)return "No payment is currently due based on the recorded due dates. See the account entries above for upcoming amounts.";
+ if(!ready)return "This statement shows your recorded account balance. Document setup is incomplete; this is not a payment demand. Contact the managing team about any amount due.";
+ return paymentTerms;
+}

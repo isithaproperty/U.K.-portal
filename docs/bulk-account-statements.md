@@ -1,0 +1,13 @@
+# Bulk individual account statements
+
+In **Debtors and reminders**, select a development, then use **Pull all account statements**. Choose the period and account scope, preview the refreshed statements, review the included accounts and document, tick the manager-only confirmation, and download one combined HTML file. Open it locally and print / save as PDF. Each unit starts a new printed page; long accounts may span multiple pages.
+
+- Defaults to positive closing balances, including posted amounts not yet due. **All unit accounts** also includes zero, credit and empty accounts.
+- Selected building only, using the complete manager-authorized `/api/blocks/[blockId]/statement` source. This retains entries before the period for opening balances. Existing pagination/count checks fail closed on incomplete reads. This endpoint also validates building supplier data; a source failure blocks the entire preview rather than silently generating partial output.
+- A new preview always performs a no-store request. Cancel, closing, date/scope changes, block switches, new input records, reload and unmount discard the snapshot and abort pending requests. Late results are ignored. Download requires reviewing the current snapshot.
+- Each statement includes building/unit identity, recorded payment reference, period, retrieval timestamp, opening balance, dated movements, running/closing balance, due and overdue amounts. Payments/credits use the existing oldest-due-first allocation. Due today is due but not overdue. Missing due dates establish no deadline. Future-dated entries are excluded.
+- This is a manager-only combined report, **never an attachment for an individual resident**. Every unit section carries that warning. It is an account statement, not a chaser or payment demand. No names, contact details or ownership are inferred from resident records. Internal notes are not inputs or output.
+- Read-only: no emails, payment posting, reminder capture or saved ledger changes. Review mode uses only synthetic supplied records and visibly labels its output. No new dependency is required.
+- This remains a snapshot, not an atomic database transaction or live view. Refresh after account changes. Output is combined HTML with browser print-to-PDF, not a ZIP or separate PDFs.
+
+Verification: Node tests cover calculation, opening/partial-payment/future/empty/zero/credit cases, strict block/unit scoping, invalid dates/rows/precision, escaping and non-mutation. Mock-hook component tests cover stale results, repeated clicks, cancel/close, changed inputs, failures, review gating and synthetic mode. These are not browser-rendering or authenticated production tests.
