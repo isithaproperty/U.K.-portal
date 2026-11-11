@@ -13,10 +13,12 @@ import {processManagementDispatches} from "../../../../../lib/management-worker"
 type Context={params:Promise<{blockId:string}>};
 export async function GET(_request:NextRequest,context:Context){
  const access=await managementAccess(Number((await context.params).blockId));if(access.response)return access.response;const {client,block}=access;
- const results=await Promise.all([client.from("management_dispatches").select("*").eq("block_id",block.id).order("scheduled_at",{ascending:false}).limit(500),client.from("management_review_state").select("area,state,revision").eq("block_id",block.id).in("area",["financials","debtors","leaseholders"]),client.from("management_manager_alerts").select("*").eq("block_id",block.id).order("review_date",{ascending:false}).limit(100),client.from("management_dispatch_events").select("dispatch_key,at,event,detail").eq("block_id",block.id).order("at",{ascending:false}).limit(1000)]);
+ const key=_request.nextUrl.searchParams.get("key");
+ if(key){if(!/^mgmt-v1-[a-zA-Z0-9-]{1,100}$/.test(key))return reply({error:"Invalid dispatch key."},400);const {data,error}=await client.from("management_dispatches").select("idempotency_key,block_id,unit_id,recipient,envelope").eq("block_id",block.id).eq("idempotency_key",key).maybeSingle();if(error||!data)return reply({error:"Exact record unavailable in this building."},404);return reply({record:data});}
+ const results=await Promise.all([client.from("management_dispatches").select("idempotency_key,block_id,unit_id,kind,recipient,status,scheduled_at,sent_at,delivery_status,delivered_at,error_message").eq("block_id",block.id).order("scheduled_at",{ascending:false}).limit(500),client.from("management_review_state").select("area,state,revision").eq("block_id",block.id).in("area",["financials","debtors","leaseholders"]),client.from("management_manager_alerts").select("*").eq("block_id",block.id).order("review_date",{ascending:false}).limit(100),client.from("management_dispatch_events").select("dispatch_key,at,event,detail").eq("block_id",block.id).order("at",{ascending:false}).limit(1000)]);
  if(results.some(r=>r.error))return reply({error:"Dispatch history or review storage is unavailable; review migrations must be installed."},503);
  const states=results[1].data??[],find=(area:string)=>states.find(s=>s.area===area);
- return reply({records:results[0].data,financial:find("financials")?.state?.prepared?.input??null,reminders:find("debtors")?.state?.history??[],consultations:find("leaseholders")?.state?.consultations??[],alerts:results[2].data,events:results[3].data,deliveryEnabled:process.env.LONDON_DELIVERY_ENABLED==="1"});
+ return reply({historyLimit:500,records:results[0].data,financial:find("financials")?.state?.prepared?.input??null,reminders:find("debtors")?.state?.history??[],consultations:find("leaseholders")?.state?.consultations??[],alerts:results[2].data,events:results[3].data,deliveryEnabled:process.env.LONDON_DELIVERY_ENABLED==="1",bulkDeliveryEnabled:process.env.LONDON_DELIVERY_ENABLED==="1"&&process.env.LONDON_BULK_REMINDER_DELIVERY_ENABLED==="1"});
 }
 export async function POST(request:NextRequest,context:Context){
  const access=await managementAccess(Number((await context.params).blockId));if(access.response)return access.response;const {client,block,user}=access;
@@ -25,7 +27,7 @@ export async function POST(request:NextRequest,context:Context){
  if(body.action==="Process due"){
   if(process.env.LONDON_DELIVERY_ENABLED!=="1")return reply({error:"Email delivery is disabled. No messages were sent."},503);
   if(body.approved!==true)return reply({error:"Explicit delivery approval is required."},400);
-  try{return reply({processed:await processManagementDispatches(createWorkerClient(),{enabled:true,apiKey:process.env.RESEND_API_KEY,from:process.env.RESEND_FROM_EMAIL,replyTo:process.env.RESEND_REPLY_TO_EMAIL},block.id)});}catch(error){return reply({error:error instanceof Error?error.message:"Dispatch processing failed."},503);}
+  try{return reply({processed:await processManagementDispatches(createWorkerClient(),{enabled:true,bulkEnabled:process.env.LONDON_BULK_REMINDER_DELIVERY_ENABLED==="1",apiKey:process.env.RESEND_API_KEY,from:process.env.RESEND_FROM_EMAIL,replyTo:process.env.RESEND_REPLY_TO_EMAIL},block.id)});}catch(error){return reply({error:error instanceof Error?error.message:"Dispatch processing failed."},503);}
  }
  if(["Cancel","Retry","Reconcile accepted","Reconcile not accepted"].includes(String(body.action))){
   if(typeof body.key!=="string"||typeof body.evidence!=="string"||body.evidence.trim().length<10)return reply({error:"Select a record and provide authoritative evidence."},400);

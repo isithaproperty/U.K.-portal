@@ -1,7 +1,7 @@
 import { contactRecipients, type ContactDraft } from "./leaseholder-planning.ts";
 
 /** Disabled transport contract only. Nothing in this module sends email. */
-export type ManagementMessageKind = "Demand" | "Credit note" | "First reminder" | "Final reminder" | "Section20";
+export type ManagementMessageKind = "Demand" | "Credit note" | "First reminder" | "Final reminder" | "Section20" | "Overdue account reminder" | "Friendly balance notice";
 export type AttachmentSnapshot = { fileName: string; mediaType: "text/plain" | "application/pdf"; encoding: "utf8" | "base64"; content: string };
 export type DeliveryEnvelope = {
   idempotencyKey: string; operationId: string; kind: ManagementMessageKind;

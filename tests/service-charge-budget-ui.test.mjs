@@ -37,6 +37,6 @@ test('delivery preparation is separated but shared queue processing is described
  assert.match(management,/preparationScope="management"/);
  assert.match(delivery,/preparationScope!=="management"&&<><option value="financial"/);
  assert.match(delivery,/preparationScope!=="service-charges"&&<option value="section20"/);
- assert.match(delivery,/Process all approved due building messages/);
+ assert.match(delivery,/Process enabled approved due building messages/);
  assert.match(delivery,/not just the preparation type shown above/);
 });

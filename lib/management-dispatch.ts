@@ -7,6 +7,7 @@ export async function sendResendEnvelope(envelope:DeliveryEnvelope,config:{enabl
  if(!config.enabled)throw new Error("Email delivery is disabled.");
  if(!config.apiKey||!config.from)throw new Error("The reviewed sender connection is incomplete.");
  if(!/^[^\s@<>:]+@[^\s@<>:]+\.[^\s@<>:]+$/.test(envelope.to)||!envelope.subject.trim()||/[\r\n\0]/.test(envelope.subject)||!envelope.body.trim()||!envelope.idempotencyKey.startsWith("mgmt-v1-")||!Array.isArray(envelope.attachments)||!envelope.attachments.length)throw new Error("Invalid immutable delivery envelope.");
+ if(["Overdue account reminder","Friendly balance notice"].includes(envelope.kind)&&(envelope.attachments.length!==1||envelope.attachments[0].mediaType!=="application/pdf"||envelope.attachments[0].encoding!=="base64"))throw new Error("A private approved PDF statement is required.");
  const attachments=envelope.attachments.map(a=>{if(!a.fileName||/[\r\n\0/\\]/.test(a.fileName)||!a.content||!["utf8","base64"].includes(a.encoding)||!["text/plain","application/pdf"].includes(a.mediaType))throw new Error("Invalid document attachment.");return {filename:a.fileName,content:a.encoding==="base64"?a.content:Buffer.from(a.content,"utf8").toString("base64"),content_type:a.mediaType};});
  try{
   const response=await fetcher("https://api.resend.com/emails",{method:"POST",headers:{Authorization:`Bearer ${config.apiKey}`,"Content-Type":"application/json","Idempotency-Key":envelope.idempotencyKey},body:JSON.stringify({from:config.from,to:[envelope.to],subject:envelope.subject,text:envelope.body,attachments,...(config.replyTo?{reply_to:config.replyTo}:{})}),signal:AbortSignal.timeout(15000)});
@@ -16,12 +17,12 @@ export async function sendResendEnvelope(envelope:DeliveryEnvelope,config:{enabl
   return {status:"Uncertain",evidence:`Provider acceptance could not be established (HTTP ${response.status}). Reconcile before resending.`};
  }catch{return {status:"Uncertain",evidence:"Transport failed or timed out. Provider acceptance is unknown; reconcile before resending."};}
 }
-export async function runDispatchJobs(store:DispatchStore,send:(envelope:DeliveryEnvelope)=>Promise<DispatchOutcome>,at:string,blockId?:number){
+export async function runDispatchJobs(store:DispatchStore,send:(envelope:DeliveryEnvelope,row:DispatchRecord)=>Promise<DispatchOutcome>,at:string,blockId?:number){
  if(!Number.isFinite(Date.parse(at)))throw new Error("A valid job time is required.");
  const rows=await store.claim(at,blockId),results:{key:string;status:string}[]=[];
  for(const row of rows){
   let outcome:DispatchOutcome;
-  try{outcome=await send(row.envelope);}catch{outcome={status:"Uncertain",evidence:"Worker could not establish transport outcome; manager reconciliation required."};}
+  try{outcome=await send(row.envelope,row);}catch{outcome={status:"Uncertain",evidence:"Worker could not establish transport outcome; manager reconciliation required."};}
   await store.finish(row,outcome);results.push({key:row.idempotency_key,status:outcome.status});
  }
  return results;

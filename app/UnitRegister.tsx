@@ -1,6 +1,7 @@
 "use client";
 
 import {reconcileShares} from "../lib/budget-import";
+import ResidentDirectory from "./ResidentDirectory";
 import ResidentArchiveAction from "./ResidentArchiveAction";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -12,6 +13,7 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
   blocks: Block[]; units: Unit[]; residents: Resident[]; initialBlockId: number | null;
 }) {
   const router = useRouter();
+  const [area, setArea] = useState<"units" | "directory">("units");
   const [blockId, setBlockId] = useState(initialBlockId ?? blocks[0]?.id ?? 0);
   const [file, setFile] = useState<File | null>(null);
   const [unitNumber, setUnitNumber] = useState("");
@@ -42,7 +44,7 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
       const response = await fetch(`/api/blocks/${blockId}/residents`, { method: "POST", headers: { "Content-Type": contentType }, body });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error ?? "Import failed.");
-      setMessage(`Saved ${result.imported} row${result.imported === 1 ? "" : "s"} to ${selected?.name ?? "this block"}.`);
+      setMessage(`Saved ${result.imported} row${result.imported === 1 ? "" : "s"} to ${selected?.name ?? "this block"}. For financial reminders, review these uploaded names/emails in Contacts and Section 20 review, confirm leaseholder role and financial-message permission, then save the contact records.`);
       setFile(null); setUnitNumber(""); setResidentName(""); setResidentEmail(""); setPhone(""); setPaymentReference(""); setPercentage("");
       router.refresh();
     } catch (error) { setMessage(error instanceof Error ? error.message : "Import failed."); }
@@ -57,6 +59,9 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
 
   return <section className="unit-register">
     <div className="page-head"><div><p className="eyebrow">BLOCK MANAGEMENT</p><h1>Units & residents</h1><p>Add units to a block, then assign residents by their sign-in email.</p></div></div>
+    <nav className="tenant-tabs" aria-label="Units and resident views"><button type="button" className={area==="units"?"active":""} aria-pressed={area==="units"} onClick={()=>setArea("units")}>Manage units & residents</button><button type="button" className={area==="directory"?"active":""} aria-pressed={area==="directory"} onClick={()=>setArea("directory")}>{blocks.length>1?"Find residents · all blocks":"Find residents"}</button></nav>
+    <div hidden={area!=="directory"}><ResidentDirectory blocks={blocks} units={units} residents={residents}/></div>
+    <div hidden={area!=="units"}>
     <section className="panel unit-select"><label>Choose block<select disabled={busy} value={blockId} onChange={event => { setBlockId(Number(event.target.value)); setMessage(""); }}>{blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label><span>{visibleUnits.length} units entered · {residents.filter(row => row.blockId === blockId && Boolean(row.archivedAt)===archived).length} resident assignments</span></section>
     <div className="unit-grid">
       <section className="panel"><p className="eyebrow">ONE AT A TIME</p><h2>Add a unit or resident</h2><form onSubmit={event => { event.preventDefault(); void importRows(JSON.stringify({ rows: [{ unit_number: unitNumber, resident_name: residentName, resident_email: residentEmail, phone,payment_reference:paymentReference,service_charge_percentage:percentage }] }), "application/json"); }}>
@@ -74,5 +79,6 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
       const people = byUnit.get(unit.id) ?? [];
       return people.length ? people.map(person => <tr key={person.id}><td>{unit.unitNumber}</td><td>{person.fullName}</td><td>{person.email}</td><td>{person.phone ?? "—"}</td><td>{unit.paymentReference??"Not added"}</td><td>{unit.serviceChargePercentage!=null?`${unit.serviceChargePercentage}%`:"Not added"}</td><td>{!person.archivedAt&&<a href={`/tenant?resident=${person.id}`}>Preview tenant portal</a>}<ResidentArchiveAction resident={person}/></td></tr>) : archived?[]:[<tr key={`unit-${unit.id}`}><td>{unit.unitNumber}</td><td>Unassigned</td><td>—</td><td>—</td><td>{unit.paymentReference??"Not added"}</td><td>{unit.serviceChargePercentage!=null?`${unit.serviceChargePercentage}%`:"Not added"}</td><td>—</td></tr>];
     })}</tbody></table></div> : <p>No units have been added to this block.</p>}</section>
+    </div>
   </section>;
 }

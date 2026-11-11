@@ -15,7 +15,7 @@ export async function GET(request:NextRequest){
   for(const blockId of [...new Set((orders??[]).map(row=>row.block_id))]){const {data,error}=await client.rpc("process_standing_orders",{p_block_id:blockId,p_today:today});if(error)errors.push(`Standing-order processing failed for block ${blockId}.`);else standing.push({blockId,result:data});}
   const {data:alerts,error:alertError}=await client.rpc("create_management_review_alerts",{p_today:today});if(alertError)errors.push("Consultation review alerts could not be generated.");
   let dispatches:unknown[]=[];
-  if(process.env.LONDON_DELIVERY_ENABLED==="1")dispatches=await processManagementDispatches(client,{enabled:true,apiKey:process.env.RESEND_API_KEY,from:process.env.RESEND_FROM_EMAIL,replyTo:process.env.RESEND_REPLY_TO_EMAIL});
+  if(process.env.LONDON_DELIVERY_ENABLED==="1")dispatches=await processManagementDispatches(client,{enabled:true,bulkEnabled:process.env.LONDON_BULK_REMINDER_DELIVERY_ENABLED==="1",apiKey:process.env.RESEND_API_KEY,from:process.env.RESEND_FROM_EMAIL,replyTo:process.env.RESEND_REPLY_TO_EMAIL});
   return reply({standing,alerts:alerts??0,dispatches,deliveryEnabled:process.env.LONDON_DELIVERY_ENABLED==="1",errors},errors.length?207:200);
  }catch(error){return reply({error:error instanceof Error?error.message:"Job processing failed."},503);}
 }

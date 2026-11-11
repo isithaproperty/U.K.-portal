@@ -91,3 +91,11 @@ export function standingOrderAction(mode: StandingOrderMode, recordedPaymentRefe
   if (mode === "Invoice preparation review") return "Prepare a draft invoice against the lease schedule for manager approval. No charge is posted.";
   return recordedPaymentReference.trim() ? "Review the recorded bank receipt and its unit allocation before posting." : "Await a recorded bank receipt. An expected standing order is not evidence of payment.";
 }
+
+/** Staff-only review prompt, never evidence that these exact charges were served. */
+export function overdueFollowUpPrompt(overduePence:number,lastDemandSent:string|null,historyAvailable:boolean):string|null{
+ if(!Number.isSafeInteger(overduePence)||overduePence<=0)return null;
+ if(!historyAvailable)return "Overdue balance to review. Demand-send history is unavailable; verify issue history before follow-up.";
+ if(lastDemandSent)return `A demand send is recorded on ${lastDemandSent}. Review this balance and issue history before following up; the record may concern different charges. Provider acceptance is not confirmed delivery.`;
+ return "Overdue balance to review, but no demand-send record is shown. Verify whether the statement was issued before following up.";
+}
