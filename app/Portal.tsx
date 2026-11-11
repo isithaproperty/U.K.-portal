@@ -1,5 +1,8 @@
 "use client";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+const BuildingStatement=dynamic(()=>import("./BuildingStatement"));
+const ManagementReview=dynamic(()=>import("./ManagementReview"));
 import dashboardLogo from "../public/aviaf-dashboard-logo.png";
 import ResidentArchiveAction from "./ResidentArchiveAction";
 import {useState} from "react";
@@ -13,14 +16,16 @@ import BlockDashboard from "./BlockDashboard";
 import ContractorRegister from "./ContractorRegister";
 import WorkOrderRegister from "./WorkOrderRegister";
 import BuildingSafetyRegister from "./BuildingSafetyRegister";
+import ManagementAlerts from "./ManagementAlerts";
 import CommunicationRegister from "./CommunicationRegister";
 import type {Block,Unit,Resident,WorkOrder,Contractor,ContractorDocument,BuildingSafetyRecord} from "./types";
 
-type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages";
-const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Health & Safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["messages","Communications","□"]];
+type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"residents"|"finance"|"messages"|"review"|"statement";
+const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Health & Safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["residents","Residents","◎"],["finance","Service charges","£"],["statement","Building statement","▤"],["messages","Communications","□"],["review","Management review","◇"]];
 const headings=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
-export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail}:{serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
+export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail,canPostBatches=false}:{canPostBatches?:boolean;serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
+ const [reviewTab,setReviewTab]=useState(0),[reviewBlock,setReviewBlock]=useState<number|null>(null);
  const residents=allResidents.filter(r=>!r.archivedAt);
  const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null),[selectedBlockId,setSelectedBlockId]=useState<number|null>(null);
  const visibleNav=isManager?nav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
@@ -29,16 +34,19 @@ export default function Portal({serviceCharges,today,tenantRequests,blocks,units
  return <main className="app-shell">
   <aside className={`sidebar ${mobile?"open":""}`}><button className="close-nav" aria-label="Close menu" onClick={()=>setMobile(false)}>×</button><div className="portfolio-switch"><span>PORTFOLIO</span><button>{isManager?"UK Residential":"My property"}</button></div><nav>{visibleNav.map(([key,label,icon])=><button key={key} className={view===key?"active":""} onClick={()=>{setView(key);setMobile(false);setQuery("")}}><i>{icon}</i>{label}</button>)}</nav><div className="side-footer"><div className="user"><span>{viewerName.split(" ").map(part=>part[0]).slice(0,2).join("").toUpperCase()}</span><div><b>{viewerName}</b><small>{isManager?"Portfolio manager":"Resident"}</small></div></div><button className="sign-out" onClick={async()=>{const {createClient}=await import("../lib/supabase/browser");await createClient().auth.signOut();window.location.href="/login";}}>Sign out</button></div></aside>
   <section className="workspace"><header><button className="menu" aria-label="Open menu" onClick={()=>setMobile(true)}>☰</button><Image className="dashboard-brand" src={dashboardLogo} alt="AVIAF Asset Management" width={180} height={70} priority/><div className="search"><span>⌕</span><input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>setView("buildings")} placeholder="Search your blocks and addresses…"/></div></header><div className="content">
+   {view==="overview"&&isManager&&<ManagementAlerts/>}
    {view==="overview"&&<Overview serviceCharges={serviceCharges} today={today} go={setView} blocks={blocks} isManager={isManager} viewerName={viewerName} ownUnitCount={ownUnits.length} contractors={contractors} workOrders={workOrders} buildingSafetyRecords={buildingSafetyRecords}/>}
    {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} ownUnits={ownUnits} onOpen={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
    {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard serviceCharges={serviceCharges} today={today} block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
    {view==="units"&&isManager&&<UnitRegister key={unitBlock??0} blocks={blocks} units={units} residents={allResidents} initialBlockId={unitBlock}/>}
    {view==="golden"&&isManager&&<BuildingSafetyRegister blocks={blocks} records={buildingSafetyRecords}/>}
-   {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={allResidents}/><WorkOrderRegister blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/></>}
+   {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={allResidents}/><WorkOrderRegister onOpenCreditors={id=>{setReviewTab(3);setReviewBlock(id);setView("review");}} blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/></>}
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="residents"&&isManager&&<ResidentRegister blocks={blocks} units={units} residents={allResidents}/>}
    {view==="finance"&&<ServiceChargeRegister residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
+   {view==="statement"&&isManager&&<BuildingStatement blocks={blocks} today={today}/>}
    {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
+   {view==="review"&&isManager&&<ManagementReview key={`${reviewTab}:${reviewBlock}`} initialTab={reviewTab} blocks={reviewBlock?[...blocks.filter(b=>b.id===reviewBlock),...blocks.filter(b=>b.id!==reviewBlock)]:blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} entries={serviceCharges} today={today} canPostBatches={canPostBatches} canRecordSettlements={memberRole==="owner"}/>}
   </div></section></main>
 }
 function Overview({serviceCharges,today,go,blocks,isManager,viewerName,ownUnitCount,contractors=[],workOrders=[],buildingSafetyRecords=[]}:{serviceCharges:ChargeEntry[];today:string;go:(view:View)=>void;blocks:Block[];isManager:boolean;viewerName:string;ownUnitCount:number;contractors?:Contractor[];workOrders?:WorkOrder[];buildingSafetyRecords?:BuildingSafetyRecord[]}){
@@ -135,6 +143,7 @@ function Stat({label,value,note,tone,onClick}:{label:string;value:number|string;
 function BuildingSafety({blocks}:{blocks:Block[]}){const[building,setBuilding]=useState(blocks[0]?.name ?? ""),selected=blocks.find(x=>x.name===building);return <><div className="page-head"><div><p className="eyebrow">HEALTH & SAFETY</p><h1>Golden Thread</h1><p>Choose a block to view its safety record.</p></div></div>{selected && <div className="building-context"><label>Building<select value={building} onChange={e=>setBuilding(e.target.value)}>{blocks.map(x=><option key={x.id}>{x.name}</option>)}</select></label><div><span>{selected?.units ?? 0} units</span><small>{selected?.address.replace(/\n/g,", ")}</small></div></div>}<div className="clean-notice">No safety records have been added for {selected?.name ?? "this portfolio"}. Compliance scores and statuses will appear only when supported by actual records.</div><div className="safety-empty-grid">{headings.map(x=><article className="panel" key={x}><span>▰</span><h2>{x}</h2><p>No records added</p></article>)}</div></>}
 function ResidentRegister({blocks,units,residents:allResidents}:{blocks:Block[];units:Unit[];residents:Resident[]}){
  const [archived,setArchived]=useState(false);
+ const [reviewTab,setReviewTab]=useState(0),[reviewBlock,setReviewBlock]=useState<number|null>(null);
  const residents=allResidents.filter(r=>Boolean(r.archivedAt)===archived);
  const[selectedBlock,setSelectedBlock]=useState<number|"all">("all"),[residentQuery,setResidentQuery]=useState("");
  const unitById=new Map(units.map(unit=>[unit.id,unit]));

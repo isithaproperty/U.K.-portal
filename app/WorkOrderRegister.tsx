@@ -7,7 +7,7 @@ import type {Block,WorkOrder} from "./types";
 type Filter="open"|"complete"|"approved"|"all";
 
 export default function WorkOrderRegister({
-  blocks,workOrders,viewerEmail,memberRole,portfolioManager,onOpenBlock
+  blocks,workOrders,viewerEmail,memberRole,portfolioManager,onOpenBlock,onOpenCreditors
 }:{
   blocks:Block[];
   workOrders:WorkOrder[];
@@ -15,6 +15,7 @@ export default function WorkOrderRegister({
   memberRole:string|null;
   portfolioManager:string|null;
   onOpenBlock:(id:number)=>void;
+  onOpenCreditors?:(blockId:number)=>void;
 }){
  const router=useRouter();
  const[filter,setFilter]=useState<Filter>("open");
@@ -46,9 +47,7 @@ export default function WorkOrderRegister({
      payment_approved_at:new Date().toISOString()
    });
  }
- async function markPaid(wo:WorkOrder){
-   await updateWO(wo.id,{payment_status:"Paid",paid_at:new Date().toISOString()});
- }
+
 
  const title=memberRole==="owner"?"All portfolio work orders":portfolioManager?portfolioManager+" portfolio work orders":"Work orders";
 
@@ -76,7 +75,7 @@ export default function WorkOrderRegister({
       <td><select value={wo.status} onChange={e=>void updateWO(wo.id,{status:e.target.value})}><option>Open</option><option>In progress</option><option>On hold</option><option>Complete</option></select></td>
       <td><input className="wo-cost-input" type="number" min="0" step="0.01" defaultValue={wo.actualCost??""} onBlur={e=>{const v=e.currentTarget.value;void updateWO(wo.id,{actual_cost:v?Number(v):null})}}/></td>
       <td>{wo.paymentStatus==="Approved"?<span className="doc-status valid">Approved</span>:wo.paymentStatus==="Paid"?<span className="doc-status valid">Paid</span>:wo.status==="Complete"?<button className="wo-pay-btn" disabled={wo.actualCost===null} onClick={()=>void approvePayment(wo)}>Approve payment</button>:<span className="doc-status expiring">Not ready</span>}</td>
-      <td><div className="wo-row-actions"><a href={`/work-orders/${wo.id}`}>Document & uploads</a><button onClick={()=>wo.blockId&&onOpenBlock(wo.blockId)}>Open property</button>{memberRole==="owner"&&wo.paymentStatus==="Approved"&&<button onClick={()=>void markPaid(wo)}>Mark paid</button>}</div></td>
+      <td><div className="wo-row-actions"><a href={`/work-orders/${wo.id}`}>Document & uploads</a><button onClick={()=>wo.blockId&&onOpenBlock(wo.blockId)}>Open property</button>{memberRole==="owner"&&wo.paymentStatus==="Approved"&&<span>{onOpenCreditors?<button onClick={()=>onOpenCreditors(wo.blockId)}>Record verified settlement</button>:"Record verified bank settlement under Creditors."} Paid status follows settled linked invoices.</span>}</div></td>
      </tr>})}
     </tbody></table></div>:<p className="block-empty-inline">No work orders in this view.</p>}
    </section>

@@ -1,0 +1,21 @@
+.management-review{--review-ink:#30291f;color:var(--review-ink)}
+.management-review [hidden]{display:none!important}
+.review-banner{background:#fff6dc;border:1px solid #d8be74;padding:16px 20px;border-radius:10px;margin:12px 0 20px}
+.review-banner p{margin:6px 0 0;line-height:1.5;max-width:100ch}
+.review-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.review-tabs button{border:1px solid #d2c6b4;background:#fff;color:#30291f;padding:12px 18px;border-radius:8px;cursor:pointer;font:inherit}
+.review-tabs button[aria-current]{background:#30291f;color:#fff;border-color:#30291f}
+.management-review .panel{padding:20px;margin:16px 0;min-width:0}
+.management-review form{display:grid;gap:12px}
+.management-review label{display:grid;gap:6px;font-size:14px}
+.management-review input,.management-review select,.management-review textarea{box-sizing:border-box;max-width:100%;padding:10px;border:1px solid #cabcaa;border-radius:6px;background:#fff;color:#30291f;font:inherit}
+.management-review table{width:100%;border-collapse:collapse;font-size:14px}
+.management-review th,.management-review td{padding:10px;text-align:left;border-bottom:1px solid #ddd3c4;vertical-align:top}
+.management-review th{font-weight:600}
+.management-review button{cursor:pointer}
+.management-review button:disabled{cursor:not-allowed;opacity:.55}
+.management-review button:focus-visible,.management-review input:focus-visible,.management-review textarea:focus-visible,.management-review select:focus-visible{outline:3px solid #8a6324;outline-offset:3px}
+.management-review pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:700px){.management-review .panel{padding:12px;overflow-x:auto}.review-tabs button{padding:10px;flex:1}.management-review h1{font-size:28px}}
+.management-review .tenant-form{max-width:none}
+.management-review input[type=checkbox]{width:auto;justify-self:start}

@@ -1,7 +1,14 @@
+import {isHostedReviewPreview,syntheticPreviewRequest} from "./lib/review-access";
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function proxy(request: NextRequest) {
+  if(isHostedReviewPreview(process.env.VERCEL_ENV,process.env.VERCEL_GIT_COMMIT_REF)){
+    const decision=syntheticPreviewRequest(request.method,request.nextUrl.pathname);
+    if(decision==="block")return NextResponse.json({error:"Synthetic review preview: live APIs, persistence, posting, sending and jobs are disabled."},{status:503,headers:{"Cache-Control":"no-store"}});
+    if(decision==="redirect")return NextResponse.redirect(new URL("/review",request.url));
+    return NextResponse.next({request});
+  }
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   if (!url || !key) return NextResponse.next({ request });

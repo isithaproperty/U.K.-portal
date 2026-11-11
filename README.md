@@ -43,3 +43,9 @@ New charge entries receive database-generated `INV-` numbers; manual payments an
 ### Resident communications dashboard
 
 Successful communications are copied to the exact resident assignments captured before the email send. Each resident home dashboard shows the latest three messages with expandable full text, plus a Communications tab showing recent messages. Portal records exclude email-provider IDs, delivery errors and other recipient addresses. Tenant policies require the captured recipient email and the current resident assignment; managers may preview only their scoped blocks. Failed sends are not published. Existing emails without recipient snapshots are not backfilled. Apply `supabase/resident_communications.sql` and deploy `supabase/functions/resident-communication/index.ts`.
+
+## Management workflow review branch
+
+The manager sidebar includes Management review for lease budgets, approved financial batches and documents, multi-email contacts/Section 20, debtor reminders and sent history, supplier settlements, standing orders and scheduled delivery. Normal Communications consumes saved contacts; work orders link to verified settlements; overview shows manager review alerts.
+
+Persistence requires reviewed SQL scripts. Bulk posting, provider delivery and background jobs require separate explicit activation and are not enabled by this branch alone. See [the full checklist, activation dependencies and verification report](docs/management-review.md). No production changes were made during development.

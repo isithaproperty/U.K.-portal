@@ -1,3 +1,5 @@
+import ReviewPage from "./review/page";
+import {isHostedReviewPreview} from "../lib/review-access";
 import { redirect } from "next/navigation";
 import { createClient } from "../lib/supabase/server";
 import Portal from "./Portal";
@@ -6,6 +8,7 @@ import type { Block, Unit, Resident, WorkOrder, Contractor, ContractorDocument, 
 
 export const dynamic = "force-dynamic";
 export default async function Home() {
+  if(isHostedReviewPreview(process.env.VERCEL_ENV,process.env.VERCEL_GIT_COMMIT_REF)) return <ReviewPage/>;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user?.email) redirect("/login");
@@ -42,5 +45,5 @@ export default async function Home() {
   const contractors: Contractor[] = (contractorResult.data ?? []).map(row => ({id:row.id,companyName:row.company_name,contactName:row.contact_name,email:row.email,phone:row.phone,trade:row.trade,companyRegistration:row.company_registration,vatNumber:row.vat_number,status:row.status,expiryPauseReason:row.expiry_pause_reason,notes:row.notes,createdAt:row.created_at,updatedAt:row.updated_at}));
   const contractorDocuments: ContractorDocument[] = (contractorDocumentResult.data ?? []).map(row => ({id:row.id,contractorId:row.contractor_id,documentType:row.document_type,fileName:row.file_name,storagePath:row.storage_path,mimeType:row.mime_type,fileSize:row.file_size,expiryDate:row.expiry_date,notes:row.notes,uploadedAt:row.uploaded_at}));
   const buildingSafetyRecords: BuildingSafetyRecord[] = (buildingSafetyResult.data ?? []).map(row => ({id:row.id,blockId:row.block_id,category:row.category,title:row.title,status:row.status,dueDate:row.due_date,notes:row.notes,fileName:row.file_name,storagePath:row.storage_path,createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}));
-  return <Portal serviceCharges={serviceCharges??[]} today={londonDate()} tenantRequests={tenantRequests??[]} blocks={blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} contractorDocuments={contractorDocuments} buildingSafetyRecords={buildingSafetyRecords} isManager={isManager} memberRole={membership?.role??null} portfolioManager={membership?.portfolio_manager??null} viewerEmail={email} />;
+  return <Portal serviceCharges={serviceCharges??[]} today={londonDate()} tenantRequests={tenantRequests??[]} blocks={blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} contractorDocuments={contractorDocuments} buildingSafetyRecords={buildingSafetyRecords} isManager={isManager} memberRole={membership?.role??null} portfolioManager={membership?.portfolio_manager??null} viewerEmail={email} canPostBatches={process.env.LONDON_LEDGER_BATCHES_ENABLED==="1"} />;
 }

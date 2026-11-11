@@ -1,0 +1,20 @@
+-- Synthetic, disposable standing-order database only. Existing cluster roles are preserved.
+do $$begin create role service_role nologin bypassrls;exception when duplicate_object then null;end$$;
+create schema auth;
+create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;
+create function auth.uid() returns uuid language sql stable as $$select (auth.jwt()->>'sub')::uuid$$;
+grant usage on schema auth to anon,authenticated,service_role;
+grant execute on all functions in schema auth to anon,authenticated,service_role;
+create table public.portal_members(email text primary key,role text,portfolio_manager text);
+create table public.blocks(id bigint primary key,manager text);
+insert into public.portal_members values('manager@example.invalid','manager','London'),('other@example.invalid','manager','Other'),('owner@example.invalid','owner',null),('tenant@example.invalid','resident',null);
+insert into public.blocks values(1,'London'),(2,'Other');
+alter table public.portal_members enable row level security;
+alter table public.blocks enable row level security;
+grant select on public.portal_members,public.blocks to authenticated;
+create policy members_self on public.portal_members for select to authenticated using(email=auth.jwt()->>'email');
+create policy readable_blocks on public.blocks for select to authenticated using(true);
+create table public.units(id bigint primary key,block_id bigint references public.blocks(id),unit_number text,unique(block_id,unit_number));
+create table public.residents(id bigint primary key,unit_id bigint,block_id bigint,full_name text,email text,phone text,unique(unit_id,email));
+insert into public.units values(10,1,'Flat 1'),(11,1,'Flat 2'),(12,1,'Flat 3'),(20,2,'Flat 1');
+grant select on public.units,public.residents to authenticated;
