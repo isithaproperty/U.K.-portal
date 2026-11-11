@@ -236,3 +236,9 @@ body{background:#f7f4ee;color:var(--ink)}
 .contractor-list-entry{display:flex;align-items:center;border-top:1px solid #edf1f2;gap:10px;padding-right:16px}.contractor-list-entry .contractor-row{flex:1;min-width:0;border-top:0}.contractor-list-delete{flex-shrink:0;cursor:pointer;padding:8px 12px}.contractor-list-delete:disabled{opacity:.5;cursor:wait}@media(max-width:500px){.contractor-list-entry{padding-right:10px;gap:4px}.contractor-list-entry .contractor-row{grid-template-columns:1fr;padding:14px 12px}}
 
 .workspace>header .dashboard-brand{width:180px;height:auto;flex-shrink:0;margin-right:24px;object-fit:contain}.workspace>header .search{min-width:0}.workspace>header .search input{min-width:0;width:100%}@media(max-width:760px){.workspace>header .dashboard-brand{width:140px;margin-right:12px}.workspace>header .search{flex:1;width:auto}.workspace>header .search input{width:100%}}
+
+/* Keep account controls reachable on short screens and in the mobile menu. */
+.sidebar{overflow-y:auto;overscroll-behavior:contain}
+.sidebar .portfolio-switch,.sidebar nav,.sidebar .side-footer{flex-shrink:0}
+.header-sign-out{margin-left:auto;flex-shrink:0;min-height:44px;white-space:nowrap}
+@media(max-width:600px){.workspace>header{padding:0 12px;gap:8px}.workspace>header .dashboard-brand{width:100px;margin-right:0}.workspace>header .search{display:none}.header-sign-out{padding:10px 12px}}
