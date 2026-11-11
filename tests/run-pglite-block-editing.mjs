@@ -1,0 +1,41 @@
+/** Disposable PostgreSQL test; never connects to hosted databases. */
+import {readFile} from 'node:fs/promises';
+import {pathToFileURL} from 'node:url';
+import assert from 'node:assert/strict';
+const {PGlite}=await import(pathToFileURL(process.env.PGLITE_MODULE).href);
+const db=new PGlite();
+try {
+ await db.exec(`create role anon; create role authenticated; create schema auth;
+ create function auth.jwt() returns jsonb language sql stable as $$select current_setting('request.jwt.claims',true)::jsonb$$;
+ grant usage on schema auth to authenticated; grant execute on function auth.jwt() to authenticated;
+ create table portal_members(email text primary key,role text,portfolio_manager text);
+ create table blocks(id bigint primary key,source_row int,name text,management_company text,type text,address text,manager text,financial_year_end date,units int check(units>=0),myblockman_export_enabled boolean default false);
+ insert into portal_members values ('owner@test','owner',null),('admin@test','admin',null),('manager@test','manager','London'),('other@test','manager','Other'),('empty@test','manager',''),('null@test','manager',null),('space@test','manager','   ');
+ insert into blocks values (1,1,'One','Company','Residential','Address','London','2026-12-31',10,false),(2,2,'Two','Company','Residential','Address','Other','2026-12-31',20,false);
+ alter table portal_members enable row level security; alter table blocks enable row level security;
+ grant select on portal_members,blocks to authenticated;
+ create policy member_self on portal_members for select to authenticated using(email=auth.jwt()->>'email');
+ create policy scoped_block_read on blocks for select to authenticated using(exists(select 1 from portal_members m where m.email=auth.jwt()->>'email' and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=blocks.manager))));`);
+ await db.exec("insert into blocks(id,manager,units) values (3,'',0),(4,null,0),(5,'   ',0);");
+ console.log('Bootstrap ready');
+ await db.exec(await readFile('docs/proposed-block-editing.sql','utf8'));
+ console.log('Proposal installed');
+ const user=async(email,role='authenticated')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({email})]);await db.exec(`set role ${role}`);};
+ const denied=async(sql,code)=>{await assert.rejects(db.exec(sql),e=>e.code===code);};
+ await user('owner@test'); assert.equal((await db.query("update blocks set name='Owner edit',manager='London' where id=2 returning id")).rows.length,1);
+ await user('admin@test'); assert.equal((await db.query("update blocks set manager='Other',address='Admin edit' where id=2 returning id")).rows.length,1);
+ await user('manager@test'); assert.equal((await db.query("update blocks set name='Manager edit',management_company='New company',type='Mixed',address='New address',manager='London',financial_year_end='2027-03-31',units=11 where id=1 returning id")).rows.length,1);
+ assert.equal((await db.query("update blocks set name='Forbidden' where id=2 returning id")).rows.length,0);
+ await denied("update blocks set manager='Other' where id=1",'42501');
+ for(const column of ['id=3','source_row=3','myblockman_export_enabled=true']) await denied(`update blocks set ${column} where id=1`,'42501');
+ await user('owner@test'); await denied('update blocks set id=3 where id=1','42501');await denied('delete from blocks where id=1','42501');
+ await user('tenant@test');assert.equal((await db.query("update blocks set units=99 where id=1 returning id")).rows.length,0);
+ await user('other@test');assert.equal((await db.query("update blocks set units=99 where id=1 returning id")).rows.length,0);
+ await user('empty@test');assert.equal((await db.query("update blocks set units=99 where id=3 returning id")).rows.length,0);
+ await user('null@test');assert.equal((await db.query("update blocks set units=99 where id=4 returning id")).rows.length,0);
+ await user('space@test');assert.equal((await db.query("update blocks set units=99 where id=5 returning id")).rows.length,0);
+ await user('nobody@test','anon');await denied('update blocks set units=99 where id=1','42501');
+ await db.exec('reset role');
+ assert.deepEqual((await db.query('select id,manager,units from blocks where id in (1,2) order by id')).rows,[{id:1,manager:'London',units:11},{id:2,manager:'Other',units:20}]);
+ console.log('PASS: owner/admin/assigned-manager updates; foreign-manager/resident/anon denial; manager reassignment denied; only seven editable columns; no delete privilege; empty/null/whitespace portfolios denied.');
+} finally {await db.close();}
