@@ -15,7 +15,7 @@ test('staff file signature matches declared MIME',async()=>{
 });
 test('separate staff flow preserves contractor workflow and no send/payment side effects',async()=>{
  const source=await readFile(new URL('../app/StaffWorkOrderDocuments.tsx',import.meta.url),'utf8');
- assert.match(source,/lock.current=true/);assert.match(source,/upsert:false/);assert.match(source,/setUncertain\(true\)/);assert.match(source,/loadError\|\|uncertain/);
+ assert.match(source,/lock.current=true/);const batch=await readFile(new URL('../lib/staff-work-order-documents.ts',import.meta.url),'utf8');assert.match(batch,/upsert:false/);assert.doesNotMatch(batch,/functions\.invoke|payment_status|\.update\(|\.delete\(/);assert.match(source,/setUncertain\(true\)/);assert.match(source,/loadError\|\|uncertain/);
  assert.doesNotMatch(source,/functions\.invoke|payment_status|\.update\(|\.delete\(/);
  for(const route of ['work-orders/[id]','contractor/work-orders/[id]']){const page=await readFile(new URL(`../app/${route}/page.tsx`,import.meta.url),'utf8');assert.match(page,/<StaffWorkOrderDocuments/);assert.match(page,/<WorkOrderWorkflow/);assert.match(page,/loadError={!!staffDocumentError}/);}
 });

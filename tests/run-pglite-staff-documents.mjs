@@ -44,6 +44,16 @@ try {
  await user('manager@test');await upload(101,10);await denied(()=>record(101,10));
  await user('owner@test');assert.equal((await db.query('select * from staff_work_order_documents')).rows.length,2);await upload(102,8);await record(102,8);
  await user('admin@test');await upload(102,9);await record(102,9);
+ await user('owner@test');
+ await db.exec("reset role;alter table work_orders add column is_ongoing boolean not null default false;insert into work_orders(id,block_id,contractor_id,status,is_ongoing) values(201,1,9,'Open',true)");
+ await user('manager@test');
+ for(let month=1;month<=12;month++){await upload(201,200+month);await record(201,200+month);}
+ const monthly=(await db.query('select * from staff_work_order_documents where work_order_id=201')).rows;
+ assert.equal(monthly.length,12);assert.equal(new Set(monthly.map(row=>row.storage_path)).size,12);
+ assert.ok(monthly.every(row=>row.uploaded_by_email==='manager@test'&&row.contractor_id===9));
+ await db.exec('reset role');assert.equal((await db.query('select status,is_ongoing from work_orders where id=201')).rows[0].status,'Open');
+ await user('contractor@test');assert.equal((await db.query('select * from staff_work_order_documents where work_order_id=201')).rows.length,12);
+ console.log('PASS: twelve monthly invoices on one ongoing order, append-only unique storage paths, audited manager attribution, assigned contractor read, no lifecycle change.');
  await user('nobody@test','anon',null);await denied(()=>db.exec('select * from staff_work_order_documents'));
  console.log('PASS: owner/admin/scoped staff inserts; audit attribution; separate document types; foreign manager/resident/contractor/anonymous insert denial; assigned contractor read; reassignment isolation; orphan/forgery/duplicate/invalid metadata denial; cancelled/unassigned rejection; no update/delete.');
 }finally{await db.close();}

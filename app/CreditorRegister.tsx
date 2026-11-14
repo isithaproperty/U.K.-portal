@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {useRouter} from "next/navigation";
+import WorkOrderCostApproval from "./WorkOrderCostApproval";
 import {recordedInvoiceSettlement, validateSupplierSettlement, type SupplierSettlementInput, type SupplierSettlementRecord, type SupplierSettlementAllocation} from "../lib/supplier-settlements";
 import type { Block, Contractor, WorkOrder } from "./types";
 import { money } from "../lib/service-charges";
@@ -104,8 +105,9 @@ function BlockCreditorRegister({ blocks, workOrders, contractors, today, blockId
     <p className="clean-notice">{reviewOnly ? "Demo workspace: changes stay in this tab only. Export before leaving." : "Edit this block’s supplier invoice register, then save explicitly. Owner-verified actual bank settlements determine invoice and work-order paid status. Editable review payment drafts do not count as actual settlement."}</p>
     {!reviewOnly && <section className="panel tenant-card"><button className="primary" disabled={saving || loading || !!loadError || !blockId || settlementSaving || uncertain} onClick={() => void saveRegister()}>{saving ? "Saving…" : "Save creditor register"}</button> <button className="unit-secondary" disabled={loading || saving || settlementSaving} onClick={() => { if (confirm("Discard unsaved creditor edits and reload saved records?")) setReload(value => value + 1); }}>Reload saved records</button>{loading && <p role="status">Loading creditor records…</p>}{loadError && <p role="alert">{loadError} Save is disabled until records load successfully.</p>}{storageMessage && <p role="status">{storageMessage}</p>}</section>}
     <fieldset disabled={loading || saving || !!loadError || settlementSaving} style={{border: 0, padding: 0, margin: 0, minWidth: 0}}>
-    {initialWorkOrderId&&order&&<p role="status">Payment for {order.workOrderNumber} · {order.title}. Record and save the supplier invoice, then select its invoice below and record the verified settlement. {order.isOngoing?"This ongoing work order stays open; payment status belongs to each invoice.":"Complete the job and approve its actual cost in Work orders before recording payment."}</p>}
+    {initialWorkOrderId&&order&&<p role="status">Payment for {order.workOrderNumber} · {order.title}. Record and save the supplier invoice, then select its invoice below and record the verified settlement. {order.isOngoing?"This ongoing work order stays open; payment status belongs to each invoice.":"Complete the job in Work orders and approve its cost below before recording payment."}</p>}
     <section className="panel tenant-card"><h2>Possible duplicate work orders</h2><p>Matching block, unit, supplier and normalized title. Review the job scope and dates before deciding whether these are duplicates; recurring work can match. No work orders are removed.</p>{duplicates.length ? duplicates.map(group => <article key={group[0].id}><h3>{blocks.find(block => block.id === group[0].blockId)?.name} · {group[0].title}</h3><ul>{group.map(item => <li key={item.id}>{item.workOrderNumber} · {item.status} · {item.createdAt.slice(0, 10)} · {item.contractor || "Supplier unassigned"}</li>)}</ul></article>) : <p>No exact normalized matches in the accessible work orders.</p>}</section>
+    {!reviewOnly&&order&&<WorkOrderCostApproval key={`${order.id}:${order.updatedAt}`} order={order} hasSettlements={actualAllocations.some(item=>item.work_order_id===order.id)} disabled={settlementLoading||!!settlementError||uncertain||settlementSaving}/>}
     <div className="tenant-grid">
       <section className="panel tenant-card tenant-form"><h2>Prepare supplier invoice</h2><form onSubmit={event => {
         event.preventDefault();
