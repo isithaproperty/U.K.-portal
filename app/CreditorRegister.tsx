@@ -6,12 +6,12 @@ import type { Block, Contractor, WorkOrder } from "./types";
 import { money } from "../lib/service-charges";
 import { validateCreditorState, addSupplierInvoice, addSupplierPayment, duplicateWorkOrders, poundsToPence, supplierInvoiceBalance, type SupplierInvoice, type SupplierPayment } from "../lib/creditors";
 
-type CreditorProps = { blocks: Block[]; workOrders: WorkOrder[]; contractors: Contractor[]; today: string; reviewOnly?: boolean; canRecordSettlements?: boolean };
+type CreditorProps = { initialWorkOrderId?:number; blocks: Block[]; workOrders: WorkOrder[]; contractors: Contractor[]; today: string; reviewOnly?: boolean; canRecordSettlements?: boolean };
 export default function CreditorRegister(props: CreditorProps) {
   const [blockId, setBlockId] = useState(props.blocks[0]?.id ?? 0);
   return <><section className="panel unit-select"><label>Creditor block<select value={blockId} onChange={event => { if (confirm("Switch blocks? Unsaved creditor edits will be discarded. Export or save first.")) setBlockId(Number(event.target.value)); }}>{props.blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label></section><BlockCreditorRegister key={blockId} {...props} blockId={blockId} workOrders={props.workOrders.filter(order => order.blockId === blockId)} /></>;
 }
-function BlockCreditorRegister({ blocks, workOrders, contractors, today, blockId, reviewOnly = false, canRecordSettlements = false }: CreditorProps & { blockId: number }) {
+function BlockCreditorRegister({ blocks, workOrders, contractors, today, blockId, initialWorkOrderId, reviewOnly = false, canRecordSettlements = false }: CreditorProps & { blockId: number }) {
   const router=useRouter();
   const [invoices, setInvoices] = useState<SupplierInvoice[]>([]);
   const [payments, setPayments] = useState<SupplierPayment[]>([]);
@@ -80,7 +80,7 @@ function BlockCreditorRegister({ blocks, workOrders, contractors, today, blockId
     } catch (error) { setStorageMessage(error instanceof Error ? error.message : "Could not save creditor records."); }
     finally { setSaving(false); }
   }
-  const [orderId, setOrderId] = useState("");
+  const [orderId, setOrderId] = useState(initialWorkOrderId&&workOrders.some(order=>order.id===initialWorkOrderId)?String(initialWorkOrderId):"");
   const [number, setNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(today);
@@ -104,6 +104,7 @@ function BlockCreditorRegister({ blocks, workOrders, contractors, today, blockId
     <p className="clean-notice">{reviewOnly ? "Demo workspace: changes stay in this tab only. Export before leaving." : "Edit this block’s supplier invoice register, then save explicitly. Owner-verified actual bank settlements determine invoice and work-order paid status. Editable review payment drafts do not count as actual settlement."}</p>
     {!reviewOnly && <section className="panel tenant-card"><button className="primary" disabled={saving || loading || !!loadError || !blockId || settlementSaving || uncertain} onClick={() => void saveRegister()}>{saving ? "Saving…" : "Save creditor register"}</button> <button className="unit-secondary" disabled={loading || saving || settlementSaving} onClick={() => { if (confirm("Discard unsaved creditor edits and reload saved records?")) setReload(value => value + 1); }}>Reload saved records</button>{loading && <p role="status">Loading creditor records…</p>}{loadError && <p role="alert">{loadError} Save is disabled until records load successfully.</p>}{storageMessage && <p role="status">{storageMessage}</p>}</section>}
     <fieldset disabled={loading || saving || !!loadError || settlementSaving} style={{border: 0, padding: 0, margin: 0, minWidth: 0}}>
+    {initialWorkOrderId&&order&&<p role="status">Payment for {order.workOrderNumber} · {order.title}. Record and save the supplier invoice, then select its invoice below and record the verified settlement. {order.isOngoing?"This ongoing work order stays open; payment status belongs to each invoice.":"Complete the job and approve its actual cost in Work orders before recording payment."}</p>}
     <section className="panel tenant-card"><h2>Possible duplicate work orders</h2><p>Matching block, unit, supplier and normalized title. Review the job scope and dates before deciding whether these are duplicates; recurring work can match. No work orders are removed.</p>{duplicates.length ? duplicates.map(group => <article key={group[0].id}><h3>{blocks.find(block => block.id === group[0].blockId)?.name} · {group[0].title}</h3><ul>{group.map(item => <li key={item.id}>{item.workOrderNumber} · {item.status} · {item.createdAt.slice(0, 10)} · {item.contractor || "Supplier unassigned"}</li>)}</ul></article>) : <p>No exact normalized matches in the accessible work orders.</p>}</section>
     <div className="tenant-grid">
       <section className="panel tenant-card tenant-form"><h2>Prepare supplier invoice</h2><form onSubmit={event => {
@@ -136,7 +137,7 @@ function BlockCreditorRegister({ blocks, workOrders, contractors, today, blockId
         } catch (error) { setMessage(error instanceof Error ? error.message : "Could not allocate payment."); }
       }}>
         <fieldset disabled={!reviewOnly&&(uncertain||!canRecordSettlements||!serverCanRecord||settlementLoading||!!settlementError)} style={{border:0,padding:0,margin:0,minWidth:0}}>
-        <label>Invoice<select required value={invoiceId} onChange={event => { setInvoiceId(event.target.value); paymentRequest.current = null; }}><option value="">Choose an invoice</option>{invoices.map(item => <option key={item.id} value={item.id}>{item.number} · {money((reviewOnly?supplierInvoiceBalance(item, payments, today):recordedInvoiceSettlement(item.id,item.amountPence,actualAllocations)).outstandingPence)} outstanding</option>)}</select></label>
+        <label>Invoice<select required value={invoiceId} onChange={event => { setInvoiceId(event.target.value); paymentRequest.current = null; }}><option value="">Choose an invoice</option>{invoices.map(item => <option key={item.id} value={item.id}>{workOrders.find(order=>order.id===item.workOrderId)?.workOrderNumber} · {item.number} · {money((reviewOnly?supplierInvoiceBalance(item, payments, today):recordedInvoiceSettlement(item.id,item.amountPence,actualAllocations)).outstandingPence)} outstanding</option>)}</select></label>
         <label>Amount allocated (£)<input required type="number" min="0.01" step="0.01" value={paymentAmount} onChange={event => setPaymentAmount(event.target.value)} /></label>
         <label>Actual payment date<input required type="date" max={today} value={paymentDate} onChange={event => setPaymentDate(event.target.value)} /></label>
         <label>Unique bank transaction ID<input required maxLength={200} value={bankReference} onChange={event => setBankReference(event.target.value)} /></label>

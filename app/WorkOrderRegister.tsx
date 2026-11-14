@@ -15,7 +15,7 @@ export default function WorkOrderRegister({
   memberRole:string|null;
   portfolioManager:string|null;
   onOpenBlock:(id:number)=>void;
-  onOpenCreditors?:(blockId:number)=>void;
+  onOpenCreditors?:(blockId:number,workOrderId?:number)=>void;
 }){
  const router=useRouter();
  const[filter,setFilter]=useState<Filter>("open");
@@ -72,10 +72,10 @@ export default function WorkOrderRegister({
       <td><strong>{wo.title}</strong><small className="wo-property-sub">{wo.isOngoing?"Ongoing works · ":""}{wo.category}</small></td>
       <td>{wo.contractor||"Not assigned"}</td>
       <td><span className={"priority-pill "+wo.priority.toLowerCase()}>{wo.priority}</span></td>
-      <td><select disabled={wo.isOngoing&&wo.status==="Complete"} value={wo.status} onChange={e=>{if(wo.isOngoing&&e.target.value==="Complete"&&!confirm("Close this ongoing work order? All saved invoices must be settled. New invoices and reopening will be blocked."))return;void updateWO(wo.id,{status:e.target.value})}}> <option>Open</option><option>In progress</option><option>On hold</option><option value="Complete">{wo.isOngoing?"Close ongoing works":"Complete"}</option></select></td>
+      <td><select aria-label={`Status for ${wo.workOrderNumber}`} disabled={wo.isOngoing&&wo.status==="Complete"} value={wo.status} onChange={e=>{if(e.target.value==="record-payment"){onOpenCreditors?.(wo.blockId,wo.id);return;}if(wo.isOngoing&&e.target.value==="Complete"&&!confirm("Close this ongoing work order? All saved invoices must be settled. New invoices and reopening will be blocked."))return;void updateWO(wo.id,{status:e.target.value})}}> <option>Open</option><option>In progress</option><option>On hold</option><option value="Complete">{wo.isOngoing?"Close ongoing works":"Complete"}</option>{onOpenCreditors&&<option value="record-payment">{wo.isOngoing?"Record invoice payment…":"Paid — record payment…"}</option>}</select></td>
       <td><input className="wo-cost-input" type="number" min="0" step="0.01" defaultValue={wo.actualCost??""} onBlur={e=>{const v=e.currentTarget.value;void updateWO(wo.id,{actual_cost:v?Number(v):null})}}/></td>
       <td>{wo.paymentStatus==="Approved"?<span className="doc-status valid">Approved{wo.isOngoing?" · see invoices":""}</span>:wo.paymentStatus==="Paid"?<span className="doc-status valid">Paid</span>:((!wo.isOngoing&&wo.status==="Complete")||(wo.isOngoing&&["Open","In progress","On hold"].includes(wo.status)))?<button className="wo-pay-btn" disabled={wo.actualCost===null||wo.actualCost<=0} onClick={()=>void approvePayment(wo)}>Approve payment</button>:<span className="doc-status expiring">Not ready</span>}</td>
-      <td><div className="wo-row-actions"><a href={`/work-orders/${wo.id}`}>Document & uploads</a><button onClick={()=>wo.blockId&&onOpenBlock(wo.blockId)}>Open property</button>{memberRole==="owner"&&wo.paymentStatus==="Approved"&&<span>{onOpenCreditors?<button onClick={()=>onOpenCreditors(wo.blockId)}>Record verified settlement</button>:"Record verified bank settlement under Creditors."} Paid status follows settled linked invoices.</span>}</div></td>
+      <td><div className="wo-row-actions"><a href={`/work-orders/${wo.id}`}>Document & uploads</a><button onClick={()=>wo.blockId&&onOpenBlock(wo.blockId)}>Open property</button>{memberRole==="owner"&&wo.paymentStatus==="Approved"&&<span>{onOpenCreditors?<button onClick={()=>onOpenCreditors(wo.blockId,wo.id)}>Record verified settlement</button>:"Record verified bank settlement under Creditors."} Paid status follows settled linked invoices.</span>}</div></td>
      </tr>})}
     </tbody></table></div>:<p className="block-empty-inline">No work orders in this view.</p>}
    </section>

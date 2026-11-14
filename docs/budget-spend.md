@@ -13,3 +13,11 @@ Apply `supabase/budget_spend.sql` after the existing management review migration
 ## Reconstruction verification
 
 This implementation was rebuilt from the verified GitHub baseline and documented requirements after earlier unpushed local source became unavailable. It is not a byte-for-byte recovery. Unit tests cover invoice-versus-order totals, cross-year and cross-building isolation, monthly running spending, split verified payments, incomplete evidence, overpayment rejection, negative remaining budgets, leap dates, budget identity and category mismatch. Additional database integration, build, and browser checks must be recorded with the final release outcome rather than inferred from these tests.
+
+## Raised work-order commitments
+
+Raised unpaid orders appear separately as unbilled commitments in Budget vs spend and Building statement, including the block’s Financials tab. The recorded actual cost takes precedence over the estimate; missing costs remain unknown and are counted explicitly. For each relevant order, unbilled commitment is the greater of zero and recorded contract cost minus all linked invoices dated through the report end. Payments change verified cash spending only. Available after commitments is annual budget minus invoices in the year minus remaining unbilled commitments. Remaining budget retains its existing invoice-only meaning.
+
+Active orders carry forward from earlier periods. Completed orders also carry forward while they have an unbilled balance or unknown cost, and appear when raised in the period or when linked invoices fall in the period; cancelled and future orders are excluded. Ongoing totals describe the recorded contract commitment across its invoices. They are not automatically renewed each budget year, and monthly invoices do not create a second annual cost. Current work-order fields are not historical snapshots.
+
+The work-order status dropdown now offers Paid — record payment for one-off jobs and Record invoice payment for ongoing work. Both open the selected block’s Creditors workflow with the work order preselected. The owner records verified bank evidence against a saved invoice; the existing settlement transaction determines Paid for fully settled one-off jobs. Ongoing orders remain open and approved, with payment tracked per invoice. No direct Paid flag bypass is introduced.

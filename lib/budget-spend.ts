@@ -29,7 +29,7 @@ export function buildBudgetSpend(input:BuildingStatementInput,categories:SpendCa
  if(ids.size!==categories.length||!categories.length||categories.some(c=>!c.id||!c.name||!Number.isSafeInteger(c.budgetPence)||c.budgetPence<0))throw Error('Invalid budget categories.');
  if(state.assignments.some(a=>!ids.has(a.categoryId)))throw Error('A saved category no longer matches the budget. Review the work-order assignments.');
  const assignments=new Map(state.assignments.map(a=>[a.workOrderId,a.categoryId]));
- const rows=[...categories,{id:'',name:'Unallocated work orders',budgetPence:0}].map(c=>({...c,invoicedPence:0,paidPence:0,remainingPence:c.budgetPence}));
+ const rows=[...categories,{id:'',name:'Unallocated work orders',budgetPence:0}].map(c=>({...c,invoicedPence:0,paidPence:0,unbilledPence:0,remainingPence:c.budgetPence,availablePence:c.budgetPence}));
  const byId=new Map(rows.map(row=>[row.id,row]));
  const before=new Date(`${start}T12:00:00Z`);before.setUTCDate(before.getUTCDate()-1);const beforeDate=before.toISOString().slice(0,10);
  const original=buildBuildingStatement({...input,start:beforeDate,end:beforeDate});
@@ -50,8 +50,11 @@ export function buildBudgetSpend(input:BuildingStatementInput,categories:SpendCa
   monthly.push({month,invoicedPence,paidPence,runningSpendPence:running});
   const next=new Date(`${monthEnd}T12:00:00Z`);next.setUTCDate(next.getUTCDate()+1);cursor=next.toISOString().slice(0,10);
  }
- rows.forEach(row=>{row.remainingPence=row.budgetPence-row.invoicedPence;});
- const total={budgetPence:rows.reduce((s,r)=>s+r.budgetPence,0),invoicedPence:running,paidPence:monthly.reduce((s,r)=>s+r.paidPence,0),remainingPence:rows.reduce((s,r)=>s+r.remainingPence,0)};
+ const closing=buildBuildingStatement(input);
+ for(const commitment of closing.commitments){byId.get(assignments.get(commitment.id)??'')!.unbilledPence+=commitment.unbilledPence??0;}
+ if(closing.totals.missingCommitmentCostCount)warnings.add(`${closing.totals.missingCommitmentCostCount} work-order commitments have no recorded cost; commitment totals include known amounts only.`);
+ rows.forEach(row=>{row.remainingPence=row.budgetPence-row.invoicedPence;row.availablePence=row.remainingPence-row.unbilledPence;});
+ const total={unbilledPence:rows.reduce((s,r)=>s+r.unbilledPence,0),availablePence:rows.reduce((s,r)=>s+r.availablePence,0),budgetPence:rows.reduce((s,r)=>s+r.budgetPence,0),invoicedPence:running,paidPence:monthly.reduce((s,r)=>s+r.paidPence,0),remainingPence:rows.reduce((s,r)=>s+r.remainingPence,0)};
  if(Object.values(total).some(n=>!Number.isSafeInteger(n)))throw Error('Report totals exceed supported accounting precision.');
  return {start,end,rows,monthly,total,warnings:[...warnings]};
 }

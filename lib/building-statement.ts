@@ -10,9 +10,10 @@ export type StatementResidentAccount={unitId:number;unitNumber:string;openingPen
 export type BuildingStatement={
  blockId:number;start:string;end:string;
  workOrders:(WorkOrder&{estimatedPence:number|null;actualPence:number|null;paidPence:number|null;unpaidPence:number|null;invoicePaymentStatus:"No invoice recorded"|"Unpaid"|"Part paid"|"Paid"})[];
+ commitments:(WorkOrder&{costPence:number|null;invoicedPence:number;unbilledPence:number|null})[];
  invoices:(SupplierInvoice&{inPeriod:boolean;paidPence:number;outstandingPence:number})[];
  residentAccounts:StatementResidentAccount[];
- totals:{workOrderCount:number;estimatedPence:number;actualPence:number;missingEstimateCount:number;missingActualCount:number;invoicedPence:number;supplierPaymentsPence:number;openingSupplierDebtPence:number;closingSupplierDebtPence:number;residentOpeningPence:number;residentChargesPence:number;residentPaymentsPence:number;residentCreditsPence:number;residentClosingPence:number;residentOutstandingPence:number;residentCreditBalancesPence:number;residentOverduePence:number};
+ totals:{workOrderCount:number;estimatedPence:number;actualPence:number;missingEstimateCount:number;missingActualCount:number;invoicedPence:number;unbilledCommitmentPence:number;missingCommitmentCostCount:number;supplierPaymentsPence:number;openingSupplierDebtPence:number;closingSupplierDebtPence:number;residentOpeningPence:number;residentChargesPence:number;residentPaymentsPence:number;residentCreditsPence:number;residentClosingPence:number;residentOutstandingPence:number;residentCreditBalancesPence:number;residentOverduePence:number};
  warnings:string[];
 };
 function date(value:string){if(!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(`${value}T12:00:00Z`))||new Date(`${value}T12:00:00Z`).toISOString().slice(0,10)!==value)throw new Error("Use valid YYYY-MM-DD statement dates.");return value;}
@@ -49,6 +50,13 @@ export function buildBuildingStatement(input:BuildingStatementInput):BuildingSta
   if(paidPence>row.amountPence)throw new Error("Verified allocations exceed an invoice amount; resolve this before using the statement.");
   return {...row,inPeriod:within(row.invoiceDate),paidPence,outstandingPence:row.amountPence-paidPence};
  });
+ // Active and unbilled orders carry forward, including completed jobs awaiting their final invoice.
+ // Costs describe the recorded contract total, including ongoing contracts, never an invented annual renewal.
+ const commitments=orders.filter(order=>date(order.createdAt.slice(0,10))<=end&&order.status!=="Cancelled").map(order=>{
+  const costPence=cost(order.actualCost)??cost(order.estimatedCost);
+  const invoicedPence=sum(invoices.filter(invoice=>invoice.workOrderId===order.id).map(invoice=>invoice.amountPence));
+  return {...order,costPence,invoicedPence,unbilledPence:costPence===null?null:Math.max(0,costPence-invoicedPence)};
+ }).filter(order=>within(order.createdAt.slice(0,10))||order.status!=="Complete"||order.unbilledPence===null||order.unbilledPence>0||invoices.some(invoice=>invoice.workOrderId===order.id&&invoice.inPeriod));
  const openingSupplierDebtPence=sum(scopedInvoices.filter(row=>row.invoiceDate<start).map(row=>row.amountPence-sum(validAllocations.filter(a=>a.invoice_id===row.id&&a.paymentDate<start).map(a=>a.amount_pence))));
  const allEntries=input.entries.filter(row=>row.block_id===blockId);unique(allEntries,row=>row.id,"ledger entry");
  if(allEntries.some(row=>!unitIds.has(row.unit_id)))warnings.push("Ledger entries for units missing from the supplied building register were excluded; resident balances may be incomplete.");
@@ -67,7 +75,7 @@ export function buildBuildingStatement(input:BuildingStatementInput):BuildingSta
   const unpaidPence=linked.length?sum(linked.map(invoice=>invoice.outstandingPence)):null;
   const invoicePaymentStatus=paidPence===null?"No invoice recorded":unpaidPence===0?"Paid":paidPence>0?"Part paid":"Unpaid";
   return {...order,paidPence,unpaidPence,invoicePaymentStatus};
- }),invoices,residentAccounts,warnings,totals:{workOrderCount:workOrders.length,estimatedPence:sum(workOrders.map(row=>row.estimatedPence??0)),actualPence:sum(workOrders.map(row=>row.actualPence??0)),missingEstimateCount:workOrders.filter(row=>row.estimatedPence===null).length,missingActualCount:workOrders.filter(row=>row.actualPence===null).length,invoicedPence:sum(invoices.filter(row=>row.inPeriod).map(row=>row.amountPence)),supplierPaymentsPence:sum(validAllocations.filter(row=>within(row.paymentDate)).map(row=>row.amount_pence)),openingSupplierDebtPence,closingSupplierDebtPence:sum(invoices.map(row=>row.outstandingPence)),residentOpeningPence:residentTotal("openingPence"),residentChargesPence:residentTotal("chargesPence"),residentPaymentsPence:residentTotal("paymentsPence"),residentCreditsPence:residentTotal("creditsPence"),residentClosingPence:residentTotal("closingPence"),residentOutstandingPence:residentTotal("outstandingPence"),residentCreditBalancesPence:residentTotal("creditBalancePence"),residentOverduePence:residentTotal("overduePence")}};
+ }),commitments,invoices,residentAccounts,warnings,totals:{unbilledCommitmentPence:sum(commitments.map(row=>row.unbilledPence??0)),missingCommitmentCostCount:commitments.filter(row=>row.costPence===null).length,workOrderCount:workOrders.length,estimatedPence:sum(workOrders.map(row=>row.estimatedPence??0)),actualPence:sum(workOrders.map(row=>row.actualPence??0)),missingEstimateCount:workOrders.filter(row=>row.estimatedPence===null).length,missingActualCount:workOrders.filter(row=>row.actualPence===null).length,invoicedPence:sum(invoices.filter(row=>row.inPeriod).map(row=>row.amountPence)),supplierPaymentsPence:sum(validAllocations.filter(row=>within(row.paymentDate)).map(row=>row.amount_pence)),openingSupplierDebtPence,closingSupplierDebtPence:sum(invoices.map(row=>row.outstandingPence)),residentOpeningPence:residentTotal("openingPence"),residentChargesPence:residentTotal("chargesPence"),residentPaymentsPence:residentTotal("paymentsPence"),residentCreditsPence:residentTotal("creditsPence"),residentClosingPence:residentTotal("closingPence"),residentOutstandingPence:residentTotal("outstandingPence"),residentCreditBalancesPence:residentTotal("creditBalancePence"),residentOverduePence:residentTotal("overduePence")}};
 }
 /** Text fields are escaped and formula-neutralized for spreadsheet applications. Amounts are GBP. */
 export function statementCsv(statement:BuildingStatement):string{
@@ -75,6 +83,7 @@ export function statementCsv(statement:BuildingStatement):string{
  const labels:Record<keyof BuildingStatement["totals"],string>={
   workOrderCount:"Work orders raised (count)",estimatedPence:"Estimated WO costs GBP",actualPence:"Recorded actual WO costs GBP",
   missingEstimateCount:"Work orders missing estimate (count)",missingActualCount:"Work orders missing actual cost (count)",
+  unbilledCommitmentPence:"Unbilled work-order commitments GBP",missingCommitmentCostCount:"Commitments missing cost (count)",
   invoicedPence:"Supplier invoices in period GBP",supplierPaymentsPence:"Verified supplier payments GBP",
   openingSupplierDebtPence:"Opening supplier amount outstanding GBP",closingSupplierDebtPence:"Closing supplier amount outstanding GBP",
   residentOpeningPence:"Resident opening balance GBP",residentChargesPence:"Resident charges GBP",residentPaymentsPence:"Resident payments GBP",
@@ -84,6 +93,8 @@ export function statementCsv(statement:BuildingStatement):string{
  for(const key of Object.keys(statement.totals) as (keyof BuildingStatement["totals"])[]){const value=statement.totals[key];rows.push([labels[key],key.endsWith("Pence")?(value/100).toFixed(2):value]);}
  rows.push([], ["Work orders raised in period"],["Number","Raised","Title","Status","Estimated GBP","Actual recorded cost GBP","Paid GBP (linked invoices)","Unpaid GBP (linked invoices)","Invoice payment status"]);
  for(const row of statement.workOrders)rows.push([row.workOrderNumber,row.createdAt.slice(0,10),row.title,row.status,row.estimatedPence===null?"Unknown":(row.estimatedPence/100).toFixed(2),row.actualPence===null?"Unknown":(row.actualPence/100).toFixed(2),row.paidPence===null?"Not recorded":(row.paidPence/100).toFixed(2),row.unpaidPence===null?"Not recorded":(row.unpaidPence/100).toFixed(2),row.invoicePaymentStatus]);
+ rows.push([], ["Work-order commitments through statement end"],["Number","Title","Recorded contract cost GBP","Invoiced to date GBP","Unbilled commitment GBP"]);
+ for(const row of statement.commitments)rows.push([row.workOrderNumber,row.title,row.costPence===null?"Unknown":(row.costPence/100).toFixed(2),(row.invoicedPence/100).toFixed(2),row.unbilledPence===null?"Unknown":(row.unbilledPence/100).toFixed(2)]);
  rows.push([], ["Supplier invoices through statement end"],["Invoice","Work order ID","Invoice date","Issued in period","Amount GBP","Paid GBP (verified)","Unpaid GBP"]);
  for(const row of statement.invoices)rows.push([row.number,row.workOrderId,row.invoiceDate,row.inPeriod?"Yes":"No",(row.amountPence/100).toFixed(2),(row.paidPence/100).toFixed(2),(row.outstandingPence/100).toFixed(2)]);
  rows.push([], ["Resident unit accounts"],["Unit","Opening GBP","Charges GBP","Payments GBP","Credits GBP","Closing GBP","Outstanding GBP","Credit balance GBP","Overdue GBP"]);

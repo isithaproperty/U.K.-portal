@@ -28,7 +28,7 @@ test('budget workflow has one production home with original styling and intact E
  assert.match(service,/className="management-review"/);assert.match(service,/import "\.\/management-review.css"/);
  assert.doesNotMatch(management,/FinancialPlanning|Budget & financials/);
  for(const label of ['Leaseholders & Section 20','Debtors','Creditors','Standing orders','Delivery & alerts'])assert.ok(management.includes(label));
- assert.match(management,/tab!==2}><CreditorRegister/);assert.match(portal,/onOpenCreditors={id=>{setReviewTab\(2\)/);
+ assert.match(management,/tab!==2}><CreditorRegister/);assert.match(portal,/onOpenCreditors={openWorkOrderPayment}/);assert.match(portal,/function openWorkOrderPayment\(blockId:number,workOrderId\?:number\).*setReviewTab\(2\).*setReviewBlock\(blockId\).*setPaymentWorkOrder\(workOrderId\)/);
  assert.match(importer,/accept="\.xlsx,\.csv/);assert.match(importer,/parseBudgetWorkbook/);assert.match(importer,/inspectBudgetCsv/);
 });
 test('delivery preparation is separated but shared queue processing is described honestly',async()=>{

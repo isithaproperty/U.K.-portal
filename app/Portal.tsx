@@ -25,6 +25,8 @@ const headings=["Building registration","Safety case","Fire safety","Structural 
 
 export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail,canPostBatches=false}:{canPostBatches?:boolean;serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
  const [reviewTab,setReviewTab]=useState(0),[reviewBlock,setReviewBlock]=useState<number|null>(null);
+ const [paymentWorkOrder,setPaymentWorkOrder]=useState<number|undefined>();
+ function openWorkOrderPayment(blockId:number,workOrderId?:number){setReviewTab(2);setReviewBlock(blockId);setPaymentWorkOrder(workOrderId);setView("review");}
  const residents=allResidents.filter(r=>!r.archivedAt);
  const[view,setView]=useState<View>("overview"),[mobile,setMobile]=useState(false),[query,setQuery]=useState(""),[unitBlock,setUnitBlock]=useState<number|null>(null),[selectedBlockId,setSelectedBlockId]=useState<number|null>(null);
  const [signingOut,setSigningOut]=useState(false),[signOutError,setSignOutError]=useState("");
@@ -42,15 +44,15 @@ export default function Portal({serviceCharges,today,tenantRequests,blocks,units
    {view==="overview"&&isManager&&<ManagementAlerts/>}
    {view==="overview"&&<Overview serviceCharges={serviceCharges} today={today} go={setView} blocks={blocks} isManager={isManager} viewerName={viewerName} ownUnitCount={ownUnits.length} contractors={contractors} workOrders={workOrders} buildingSafetyRecords={buildingSafetyRecords}/>}
    {view==="buildings"&&<BlockRegister globalQuery={query} blocks={blocks} ownUnits={ownUnits} onOpen={(id)=>{setSelectedBlockId(id);setView("block");}}/>}
-   {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard serviceCharges={serviceCharges} today={today} block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
+   {view==="block"&&selectedBlockId&&blocks.find(b=>b.id===selectedBlockId)&&<BlockDashboard onOpenCreditors={isManager?openWorkOrderPayment:undefined} serviceCharges={serviceCharges} today={today} block={blocks.find(b=>b.id===selectedBlockId)!} units={units} residents={residents} workOrders={workOrders} contractors={contractors} onBack={()=>setView("buildings")}/>}
    {view==="units"&&isManager&&<UnitRegister key={unitBlock??0} blocks={blocks} units={units} residents={allResidents} initialBlockId={unitBlock}/>}
    {view==="golden"&&isManager&&<BuildingSafetyRegister blocks={blocks} records={buildingSafetyRecords}/>}
-   {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={allResidents}/><WorkOrderRegister onOpenCreditors={id=>{setReviewTab(2);setReviewBlock(id);setView("review");}} blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/></>}
+   {view==="maintenance"&&isManager&&<><TenantRequestRegister requests={tenantRequests} blocks={blocks} units={units} residents={allResidents}/><WorkOrderRegister onOpenCreditors={openWorkOrderPayment} blocks={blocks} workOrders={workOrders} viewerEmail={viewerEmail} memberRole={memberRole} portfolioManager={portfolioManager} onOpenBlock={(id)=>{setSelectedBlockId(id);setView("block");}}/></>}
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="finance"&&<ServiceChargeRegister isManager={isManager} canPostBatches={canPostBatches} residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
    {view==="statement"&&isManager&&<BuildingStatement blocks={blocks} today={today}/>}
    {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
-   {view==="review"&&isManager&&<ManagementReview key={`${reviewTab}:${reviewBlock}`} initialTab={reviewTab} blocks={reviewBlock?[...blocks.filter(b=>b.id===reviewBlock),...blocks.filter(b=>b.id!==reviewBlock)]:blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} entries={serviceCharges} today={today} canRecordSettlements={memberRole==="owner"}/>}
+   {view==="review"&&isManager&&<ManagementReview initialWorkOrderId={paymentWorkOrder} key={`${reviewTab}:${reviewBlock}`} initialTab={reviewTab} blocks={reviewBlock?[...blocks.filter(b=>b.id===reviewBlock),...blocks.filter(b=>b.id!==reviewBlock)]:blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} entries={serviceCharges} today={today} canRecordSettlements={memberRole==="owner"}/>}
   </div></section></main>
 }
 function Overview({serviceCharges,today,go,blocks,isManager,viewerName,ownUnitCount,contractors=[],workOrders=[],buildingSafetyRecords=[]}:{serviceCharges:ChargeEntry[];today:string;go:(view:View)=>void;blocks:Block[];isManager:boolean;viewerName:string;ownUnitCount:number;contractors?:Contractor[];workOrders?:WorkOrder[];buildingSafetyRecords?:BuildingSafetyRecord[]}){
