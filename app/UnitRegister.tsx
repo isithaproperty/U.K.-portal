@@ -1,4 +1,5 @@
 "use client";
+import ResidentContactEditor from "./ResidentContactEditor";
 
 import {reconcileShares} from "../lib/budget-import";
 import ResidentDirectory from "./ResidentDirectory";
@@ -9,8 +10,8 @@ import type { Block, Resident, Unit } from "./types";
 
 const template = "unit_number,resident_name,resident_email,phone,payment_reference,service_charge_percentage\n";
 
-export default function UnitRegister({ blocks, units, residents, initialBlockId }: {
-  blocks: Block[]; units: Unit[]; residents: Resident[]; initialBlockId: number | null;
+export default function UnitRegister({ blocks, units, residents, initialBlockId,canEditContacts=false }: {
+  canEditContacts?:boolean; blocks: Block[]; units: Unit[]; residents: Resident[]; initialBlockId: number | null;
 }) {
   const router = useRouter();
   const [area, setArea] = useState<"units" | "directory">("units");
@@ -60,7 +61,7 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
   return <section className="unit-register">
     <div className="page-head"><div><p className="eyebrow">BLOCK MANAGEMENT</p><h1>Units & residents</h1><p>Add units to a block, then assign residents by their sign-in email.</p></div></div>
     <nav className="tenant-tabs" aria-label="Units and resident views"><button type="button" className={area==="units"?"active":""} aria-pressed={area==="units"} onClick={()=>setArea("units")}>Manage units & residents</button><button type="button" className={area==="directory"?"active":""} aria-pressed={area==="directory"} onClick={()=>setArea("directory")}>{blocks.length>1?"Find residents · all blocks":"Find residents"}</button></nav>
-    <div hidden={area!=="directory"}><ResidentDirectory blocks={blocks} units={units} residents={residents}/></div>
+    <div hidden={area!=="directory"}><ResidentDirectory canEditContacts={canEditContacts} blocks={blocks} units={units} residents={residents}/></div>
     <div hidden={area!=="units"}>
     <section className="panel unit-select"><label>Choose block<select disabled={busy} value={blockId} onChange={event => { setBlockId(Number(event.target.value)); setMessage(""); }}>{blocks.map(block => <option key={block.id} value={block.id}>{block.name}</option>)}</select></label><span>{visibleUnits.length} units entered · {residents.filter(row => row.blockId === blockId && Boolean(row.archivedAt)===archived).length} resident assignments</span></section>
     <div className="unit-grid">
@@ -75,9 +76,9 @@ export default function UnitRegister({ blocks, units, residents, initialBlockId 
     </div>
     <p>Saved apportionments: {visibleUnits.filter(unit=>unit.serviceChargePercentage!=null).length} of {visibleUnits.length} units. {shareStatus} Budget uploads reuse these shares, then show any rounding adjustments for approval before saving. No charges are posted by this import.</p>
     {message && <p className="unit-message" role="status">{message}</p>}
-    <nav className="tenant-tabs"><button className={!archived?"active":""} onClick={()=>setArchived(false)}>Current residents</button><button className={archived?"active":""} onClick={()=>setArchived(true)}>Archive</button></nav><section className="panel unit-list"><div className="panel-head"><div><p className="eyebrow">{selected?.name.toUpperCase()}</p><h2>Unit register</h2></div></div>{visibleUnits.length ? <div className="block-table-wrap"><table className="block-table"><thead><tr><th>Unit</th><th>Resident</th><th>Email</th><th>Phone</th><th>Payment reference</th><th>Apportionment</th><th>Actions</th></tr></thead><tbody>{visibleUnits.flatMap(unit => {
+    <nav className="tenant-tabs"><button className={!archived?"active":""} onClick={()=>setArchived(false)}>Current residents</button><button className={archived?"active":""} onClick={()=>setArchived(true)}>Archive</button></nav><section className="panel unit-list"><div className="panel-head"><div><p className="eyebrow">{selected?.name.toUpperCase()}</p><h2>Unit register</h2></div></div>{visibleUnits.length ? <div className="block-table-wrap"><table className="block-table"><thead><tr><th>Unit</th><th>Resident</th><th>Contact email</th><th>Phone</th><th>Payment reference</th><th>Apportionment</th><th>Actions</th></tr></thead><tbody>{visibleUnits.flatMap(unit => {
       const people = byUnit.get(unit.id) ?? [];
-      return people.length ? people.map(person => <tr key={person.id}><td>{unit.unitNumber}</td><td>{person.fullName}</td><td>{person.email}</td><td>{person.phone ?? "—"}</td><td>{unit.paymentReference??"Not added"}</td><td>{unit.serviceChargePercentage!=null?`${unit.serviceChargePercentage}%`:"Not added"}</td><td>{!person.archivedAt&&<a href={`/tenant?resident=${person.id}`}>Preview tenant portal</a>}<ResidentArchiveAction resident={person}/></td></tr>) : archived?[]:[<tr key={`unit-${unit.id}`}><td>{unit.unitNumber}</td><td>Unassigned</td><td>—</td><td>—</td><td>{unit.paymentReference??"Not added"}</td><td>{unit.serviceChargePercentage!=null?`${unit.serviceChargePercentage}%`:"Not added"}</td><td>—</td></tr>];
+      return people.length ? people.map(person => <tr key={person.id}><td>{unit.unitNumber}</td><td>{person.fullName}</td><td>{person.contactEmail??person.email}</td><td>{person.phone ?? "—"}</td><td>{unit.paymentReference??"Not added"}</td><td>{unit.serviceChargePercentage!=null?`${unit.serviceChargePercentage}%`:"Not added"}</td><td>{!person.archivedAt&&<a href={`/tenant?resident=${person.id}`}>Preview tenant portal</a>}{canEditContacts&&<ResidentContactEditor resident={person}/>}<ResidentArchiveAction resident={person}/></td></tr>) : archived?[]:[<tr key={`unit-${unit.id}`}><td>{unit.unitNumber}</td><td>Unassigned</td><td>—</td><td>—</td><td>{unit.paymentReference??"Not added"}</td><td>{unit.serviceChargePercentage!=null?`${unit.serviceChargePercentage}%`:"Not added"}</td><td>—</td></tr>];
     })}</tbody></table></div> : <p>No units have been added to this block.</p>}</section>
     </div>
   </section>;
