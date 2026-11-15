@@ -52,6 +52,6 @@ export async function GET(request:NextRequest,context:Context){
   try{invoices=validateCreditorState(saved.data?.state??{invoices:[],payments:[]},workOrders,blockId,londonDate()).invoices;}
   catch{throw new Error("Saved supplier invoice data failed validation. Review the creditor register before generating a statement.");}
   // Payment drafts are intentionally not returned or included in reported paid amounts.
-  return reply({units,workOrders,entries,invoices,settlements,allocations,asOfGeneratedAt:new Date().toISOString()});
+  return reply({units,workOrders,entries,invoices,settlements,allocations,sourceCoverage:{creditorRegisterRecorded:!!saved.data},asOfGeneratedAt:new Date().toISOString()});
  }catch(error){return reply({error:error instanceof Error?error.message:"Statement data is unavailable. No statement was generated."},503);}
 }

@@ -77,10 +77,7 @@ export function buildBuildingStatement(input:BuildingStatementInput):BuildingSta
   return {...order,paidPence,unpaidPence,invoicePaymentStatus};
  }),commitments,invoices,residentAccounts,warnings,totals:{unbilledCommitmentPence:sum(commitments.map(row=>row.unbilledPence??0)),missingCommitmentCostCount:commitments.filter(row=>row.costPence===null).length,workOrderCount:workOrders.length,estimatedPence:sum(workOrders.map(row=>row.estimatedPence??0)),actualPence:sum(workOrders.map(row=>row.actualPence??0)),missingEstimateCount:workOrders.filter(row=>row.estimatedPence===null).length,missingActualCount:workOrders.filter(row=>row.actualPence===null).length,invoicedPence:sum(invoices.filter(row=>row.inPeriod).map(row=>row.amountPence)),supplierPaymentsPence:sum(validAllocations.filter(row=>within(row.paymentDate)).map(row=>row.amount_pence)),openingSupplierDebtPence,closingSupplierDebtPence:sum(invoices.map(row=>row.outstandingPence)),residentOpeningPence:residentTotal("openingPence"),residentChargesPence:residentTotal("chargesPence"),residentPaymentsPence:residentTotal("paymentsPence"),residentCreditsPence:residentTotal("creditsPence"),residentClosingPence:residentTotal("closingPence"),residentOutstandingPence:residentTotal("outstandingPence"),residentCreditBalancesPence:residentTotal("creditBalancePence"),residentOverduePence:residentTotal("overduePence")}};
 }
-/** Text fields are escaped and formula-neutralized for spreadsheet applications. Amounts are GBP. */
-export function statementCsv(statement:BuildingStatement):string{
- const rows:(string|number|null)[][]=[["Building financial statement","Building ID",statement.blockId],["From",statement.start,"To",statement.end],["Basis","Recorded data only. WO costs are not cash spend. Unmatched bank rows do not settle debts."],["Summary","Value"]];
- const labels:Record<keyof BuildingStatement["totals"],string>={
+export const buildingStatementLabels:Record<keyof BuildingStatement["totals"],string>={
   workOrderCount:"Work orders raised (count)",estimatedPence:"Estimated WO costs GBP",actualPence:"Recorded actual WO costs GBP",
   missingEstimateCount:"Work orders missing estimate (count)",missingActualCount:"Work orders missing actual cost (count)",
   unbilledCommitmentPence:"Unbilled work-order commitments GBP",missingCommitmentCostCount:"Commitments missing cost (count)",
@@ -90,7 +87,11 @@ export function statementCsv(statement:BuildingStatement):string{
   residentCreditsPence:"Resident credits GBP",residentClosingPence:"Resident closing balance GBP",residentOutstandingPence:"Resident outstanding GBP",
   residentCreditBalancesPence:"Resident credit balances GBP",residentOverduePence:"Resident overdue GBP"
  };
- for(const key of Object.keys(statement.totals) as (keyof BuildingStatement["totals"])[]){const value=statement.totals[key];rows.push([labels[key],key.endsWith("Pence")?(value/100).toFixed(2):value]);}
+/** Text fields are escaped and formula-neutralized for spreadsheet applications. Amounts are GBP. */
+export function statementCsv(statement:BuildingStatement):string{
+ const rows:(string|number|null)[][]=[["Building financial statement","Building ID",statement.blockId],["From",statement.start,"To",statement.end],["Basis","Recorded data only. WO costs are not cash spend. Unmatched bank rows do not settle debts."],["Summary","Value"]];
+
+ for(const key of Object.keys(statement.totals) as (keyof BuildingStatement["totals"])[]){const value=statement.totals[key];rows.push([buildingStatementLabels[key],key.endsWith("Pence")?(value/100).toFixed(2):value]);}
  rows.push([], ["Work orders raised in period"],["Number","Raised","Title","Status","Estimated GBP","Actual recorded cost GBP","Paid GBP (linked invoices)","Unpaid GBP (linked invoices)","Invoice payment status"]);
  for(const row of statement.workOrders)rows.push([row.workOrderNumber,row.createdAt.slice(0,10),row.title,row.status,row.estimatedPence===null?"Unknown":(row.estimatedPence/100).toFixed(2),row.actualPence===null?"Unknown":(row.actualPence/100).toFixed(2),row.paidPence===null?"Not recorded":(row.paidPence/100).toFixed(2),row.unpaidPence===null?"Not recorded":(row.unpaidPence/100).toFixed(2),row.invoicePaymentStatus]);
  rows.push([], ["Work-order commitments through statement end"],["Number","Title","Recorded contract cost GBP","Invoiced to date GBP","Unbilled commitment GBP"]);

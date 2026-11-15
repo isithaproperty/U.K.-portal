@@ -2,7 +2,7 @@ import type {Block,Unit} from "../app/types";
 import {chargeSummary,type ChargeEntry} from "./service-charges.ts";
 import {statementPaymentMessage} from "./service-charge-document.ts";
 export type AccountScope="debt"|"all";
-export type BulkStatementInput={block:Block;units:Unit[];entries:ChargeEntry[];start:string;end:string;today:string;scope:AccountScope;generatedAt:string;synthetic?:boolean};
+export type BulkStatementInput={block:Pick<Block,"id"|"name"|"address">;units:Unit[];entries:ChargeEntry[];start:string;end:string;today:string;scope:AccountScope;generatedAt:string;synthetic?:boolean};
 export type BulkStatements={html:string;blockId:number;start:string;end:string;scope:AccountScope;generatedAt:string;accounts:{unitId:number;unitNumber:string;opening:number;balance:number;due:number;overdue:number}[]};
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 const money=(n:number)=>`£${(n/100).toFixed(2)}`;
