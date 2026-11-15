@@ -1,5 +1,8 @@
 # Resident account sign-in display — prepared, not deployed
 
+> Historical preparation/review below. The subsequently authorized integrated release and applied migrations are recorded in [london-integrated-rollout.md](london-integrated-rollout.md). Backup/restore and authenticated-testing limitations remain as described there.
+
+
 Independent branch `feature/resident-last-sign-in` starts from current production/main `16225143f4d9e98ded39fe1d2181926a793d5329`. The unpublished resident contact editor (`fix/resident-contact-edit`, `a760db6`) and client invoices (`feature/client-invoices`, `68e0fe5`) remain preserved in their separate clean worktrees. This feature does not include their migrations. Integration into the same resident views needs an explicit reviewed merge, preserving their added fields and flags.
 
 ## What the timestamp means

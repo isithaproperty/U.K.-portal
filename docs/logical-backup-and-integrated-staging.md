@@ -1,5 +1,8 @@
 # London backup and integrated staging feasibility
 
+> Historical preparation/review below. The subsequently authorized integrated release and applied migrations are recorded in [london-integrated-rollout.md](london-integrated-rollout.md). Backup/restore and authenticated-testing limitations remain as described there.
+
+
 Assessment: 15 November 2026. **A secure current production logical backup and independently verified restore cannot be completed with the credentials presently provisioned here.** Docker works, and all three prepared application branches have now been combined and checked locally. That is code integration evidence, not a backup, restored database or full staging verification.
 
 No backup was generated or transmitted, no restore was attempted, no SQL migration was applied in this investigation, no hosted branch/project was created, and nothing was pushed/deployed. Existing production rows, schedules and configuration were not changed. Lovemore Park was untouched.

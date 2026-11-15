@@ -1,5 +1,8 @@
 # London resident contact editing — prepared, not deployed
 
+> Historical preparation/review below. The subsequently authorized integrated release and applied migrations are recorded in [london-integrated-rollout.md](london-integrated-rollout.md). Backup/restore and authenticated-testing limitations remain as described there.
+
+
 Built separately on `fix/resident-contact-edit` from production/main `16225143f4d9e98ded39fe1d2181926a793d5329`. The unpublished client invoicing branch in `/workspace/U.K.-portal` remains at `593267143f76168f88c8cae60e275632d664364b` and is not included.
 
 ## Behavior

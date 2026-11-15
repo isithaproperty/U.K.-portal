@@ -7,9 +7,9 @@ import {buildClientInvoicePdf} from '../lib/client-invoice-pdf.ts';
 import {invoiceRecord,invoiceDocument,uuid} from './fixtures/client-invoices.mjs';
 function compile(path,names,deps){const raw=readFileSync(new URL(path,import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace(/export async function/g,'async function').replace(/^export /gm,'');const js=ts.transpileModule(raw,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;return new Function(...Object.keys(deps),`${js};return {${names.join(',')}};`)(...Object.values(deps));}
 const reply=(body,status=200)=>({body,status});
-function harness({role='owner',denied=false,error=null,record=invoiceRecord(),data}={}){
+function harness({issuingEnabled=true,role='owner',denied=false,error=null,record=invoiceRecord(),data}={}){
  const calls=[],client={from(table){assert.equal(table,'client_invoices');const q={select(){return q;},eq(){return q;},async maybeSingle(){return {data:record,error:null};}};return q;},async rpc(name,args){calls.push({name,args});return {data:data===undefined?{invoice:record,replayed:false}:data,error};}};
- const routes=compile('../app/api/client-invoices/route.ts',['POST'],{clientInvoiceAccess:async()=>denied?{response:reply({error:'Denied'},403)}:{client,member:{role}},reply,validateClientInvoiceRequest,buildClientInvoicePdf,londonDate:()=> '2026-11-15'});
+ const routes=compile('../app/api/client-invoices/route.ts',['POST'],{clientInvoiceIssuingEnabled:()=>issuingEnabled,clientInvoiceAccess:async()=>denied?{response:reply({error:'Denied'},403)}:{client,member:{role}},reply,validateClientInvoiceRequest,buildClientInvoicePdf,londonDate:()=> '2026-11-15'});
  return {calls,invoke:(body,origin='https://example.invalid')=>routes.POST({headers:new Headers({origin}),nextUrl:new URL('https://example.invalid/api/client-invoices'),text:async()=>JSON.stringify(body)})};
 }
 const payload=(action='Save')=>({requestId:uuid(100),id:uuid(1),blockId:1,expectedRevision:1,action,...(action==='Save'?{document:invoiceDocument()}:{confirmed:true})});
@@ -32,3 +32,5 @@ test('application gate defaults closed before auth/database access, and resident
  try{const api=compile('../lib/client-invoice-access.ts',['clientInvoiceAccess'],{NextResponse:{json:(body,options)=>reply(body,options.status)},createClient:()=>{throw Error('Must not connect');},canManageReviewBlock:()=>true});assert.equal((await api.clientInvoiceAccess()).response.status,503);}finally{if(old===undefined)delete process.env.LONDON_CLIENT_INVOICES_ENABLED;else process.env.LONDON_CLIENT_INVOICES_ENABLED=old;}
  const portal=readFileSync(new URL('../app/Portal.tsx',import.meta.url),'utf8');assert.match(portal,/key!=="client-invoices"\|\|clientInvoicesEnabled/);assert.match(portal,/view==="client-invoices"&&isManager&&clientInvoicesEnabled/);
 });
+
+test('draft-only API rejects final issue before any mutation when issuing is disabled',async()=>{const h=harness({issuingEnabled:false});const result=await h.invoke(payload('Issue'));assert.equal(result.status,403);assert.equal(result.body.uncertain,false);assert.equal(h.calls.length,0);});

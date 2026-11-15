@@ -1,5 +1,8 @@
 # Client-invoice review corrections — local only
 
+> Historical preparation/review below. The subsequently authorized integrated release and applied migrations are recorded in [london-integrated-rollout.md](london-integrated-rollout.md). Backup/restore and authenticated-testing limitations remain as described there.
+
+
 This follow-up corrects the independent review of proposal commit `69d3513`. Nothing has been applied to production or deployed. The existing contractor work-order amount release remains separate. No real invoices, financial balances, messages, storage files or Lovemore Park resources were created/changed.
 
 ## Corrections

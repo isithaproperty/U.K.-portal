@@ -1,5 +1,8 @@
 # London recovery prerequisites — read-only assessment
 
+> Historical preparation/review below. The subsequently authorized integrated release and applied migrations are recorded in [london-integrated-rollout.md](london-integrated-rollout.md). Backup/restore and authenticated-testing limitations remain as described there.
+
+
 The newer supplied screenshot visibly identifies **London Property Portal / main PRODUCTION** and its daily physical backup inventory, latest **14 November 2026 07:34:34 UTC**. This resolves the earlier unlabelled screenshot's identity uncertainty. It does not establish a tested restore, Storage object backup or any newer recovery point. Storage objects are excluded from the database backup. No restore, backup creation, PITR activation, database migration or deployment was performed.
 
 The connected project was independently verified as **London Property Portal**, ref `yhyqxvbquavhndxcwttt`, region `eu-west-2`, ACTIVE_HEALTHY, PostgreSQL 17.6.1.166. Open the identified project's [backup page](https://supabase.com/dashboard/project/yhyqxvbquavhndxcwttt/database/backups) to bind backup evidence to that exact ref. The newer screenshot independently binds the visible inventory to the named London project. The connected project identity supplies its exact ref; retain both pieces of evidence.

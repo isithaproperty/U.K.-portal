@@ -1,5 +1,8 @@
 # Management-company client invoices — review before rollout
 
+> Historical preparation/review below. The subsequently authorized integrated release and applied migrations are recorded in [london-integrated-rollout.md](london-integrated-rollout.md). Backup/restore and authenticated-testing limitations remain as described there.
+
+
 ## Outcome and release boundary
 
 Prepared locally on branch `feature/client-invoices`, based on current main `16225143f4d9e98ded39fe1d2181926a793d5329`. This is a separate sales-invoicing area for the management company to bill clients for management fees or other line items. It does not reuse resident service charges, contractor invoices, bank reconciliation, supplier settlements or their invoice numbers.

@@ -6,7 +6,7 @@ import * as model from '../lib/client-invoices.ts';
 import {invoiceRecord,uuid} from './fixtures/client-invoices.mjs';
 const raw=readFileSync(new URL('../app/ClientInvoiceRegister.tsx',import.meta.url),'utf8').replace(/^import[^\n]*\n/gm,'').replace('export default function','function');
 const js=ts.transpileModule(raw,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None,jsx:ts.JsxEmit.React}}).outputText;
-function harness({canApprove=true}={}){
+function harness({canApprove=true,issuingEnabled=true}={}){
  let cursor=0,tree;const state=[],refs=[],effects=[],pending=[],calls=[],locks=[];
  const useState=initial=>{const i=cursor++;if(!(i in state))state[i]=initial;return [state[i],v=>state[i]=typeof v==='function'?v(state[i]):v];};
  const useRef=initial=>{const i=cursor++;return refs[i]??={current:initial};};
@@ -16,7 +16,7 @@ function harness({canApprove=true}={}){
  const deps={React,useState,useRef,useEffect,fetch,money:n=>`GBP ${n}`,...model,confirm:()=>true};
  const component=new Function(...Object.keys(deps),`${js};return BlockClientInvoices;`)(...Object.values(deps));
  const lockChange=value=>locks.push(value);
- function render(){cursor=0;tree=component({blockId:1,today:'2026-11-15',canApprove,onLockChange:lockChange});while(pending.length)pending.shift()();}
+ function render(){cursor=0;tree=component({blockId:1,today:'2026-11-15',canApprove,issuingEnabled,onLockChange:lockChange});while(pending.length)pending.shift()();}
  function nodes(){const out=[];function walk(n){if(n&&typeof n==='object'){out.push(n);n.children.forEach(walk);}}walk(tree);return out;}
  const text=n=>typeof n==='string'?n:(n?.children??[]).map(text).join('');
  const button=label=>nodes().find(n=>n.tag==='button'&&text(n)===label);
@@ -53,3 +53,5 @@ test('invoice type and tax point are explicit and selecting VAT never supplies a
  const select=h.nodes().find(n=>n.tag==='select'&&n.props.value==='vat');select.props.onChange({target:{value:'non-vat'}});h.render();assert.equal(h.nodes().some(n=>n.tag==='label'&&h.text(n).startsWith('VAT tax point')),false);
  h.button('Save draft').props.onClick();const payload=JSON.parse(h.calls.at(-1).options.body);assert.equal(payload.document.invoiceType,'non-vat');assert.equal(payload.document.vatTaxPoint,'');assert.equal(payload.document.issuer.phone,'');
 });
+
+test('draft-only UI retains review but hides final issuing',async()=>{const h=harness({issuingEnabled:false});await h.open(invoiceRecord({status:'Reviewed',revision:2}));assert.equal(h.button('Issue final invoice'),undefined);});

@@ -15,3 +15,5 @@ export async function clientInvoiceAccess(blockId?:number){
  }
  return {client,member};
 }
+
+export const clientInvoiceIssuingEnabled=()=>process.env.LONDON_CLIENT_INVOICE_ISSUING_ENABLED==='true';

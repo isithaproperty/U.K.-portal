@@ -1,5 +1,8 @@
 # Client invoice field fixes — unpublished
 
+> Historical preparation/review below. The subsequently authorized integrated release and applied migrations are recorded in [london-integrated-rollout.md](london-integrated-rollout.md). Backup/restore and authenticated-testing limitations remain as described there.
+
+
 This update supersedes the missing-contact/supply-date findings in `client-invoice-legal-fields-review.md`. No real issuer or VAT status was inferred. The implementation, proposed SQL and renderer remain unpublished; production has not been modified.
 
 ## Implemented

@@ -1,0 +1,38 @@
+/** All three proposals in one disposable DB. Synthetic fixtures; no hosted connection. */
+import {readFile} from 'node:fs/promises';import {pathToFileURL} from 'node:url';import assert from 'node:assert/strict';
+import {invoiceDocument,uuid} from './fixtures/client-invoices.mjs';import {buildClientInvoicePdf} from '../lib/client-invoice-pdf.ts';
+const {PGlite}=await import(pathToFileURL(process.env.PGLITE_MODULE).href),db=new PGlite();let requestId=8000;
+try{
+ const fixtureSource=await readFile('tests/run-pglite-resident-contact-edit.mjs','utf8'),bootstrap=fixtureSource.match(/await db.exec\(`([\s\S]*?)`\);/)[1];await db.exec(bootstrap);
+ await db.exec(`alter table blocks add column name text not null default 'Synthetic Court',add column address text not null default 'Synthetic address';
+ create table auth.users(id uuid primary key,email text,last_sign_in_at timestamptz,deleted_at timestamptz,is_anonymous boolean);revoke all on auth.users from public,anon,authenticated,service_role;
+ insert into auth.users values('00000000-0000-0000-0000-000000000001','old@test.invalid','2026-01-01T12:00Z',null,false);
+ create table service_charge_entries(id bigint,resident_id bigint,amount_pence bigint);insert into service_charge_entries values(1,1,12000);
+ create table supplier_settlements(id bigint,amount_pence bigint);insert into supplier_settlements values(1,2345);
+ create schema storage;create table storage.objects(id bigint,name text);insert into storage.objects values(1,'synthetic/one.pdf');`);
+ const snapshot=async()=>{await db.exec('reset role');return {auth:(await db.query('select * from auth.users order by id')).rows,ledger:(await db.query('select * from ledger order by id')).rows,charges:(await db.query('select * from service_charge_entries order by id')).rows,settlements:(await db.query('select * from supplier_settlements order by id')).rows,storage:(await db.query('select * from storage.objects order by id')).rows,ownership:(await db.query('select id,unit_id,block_id,email from residents order by id')).rows}};
+ const before=await snapshot();
+ for(const file of ['docs/proposed-client-invoices.sql','docs/proposed-resident-contact-edit.sql','docs/proposed-resident-sign-ins.sql'])await db.exec(await readFile(file,'utf8'));
+ assert.deepEqual(await snapshot(),before);
+ const as=async(email,role='authenticated')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({email,sub:uuid(999),role:'admin'})]);await db.exec(`set role ${role}`)};
+ const run=async(action,id,revision,extra={})=>(await db.query('select mutate_client_invoice($1::jsonb) result',[JSON.stringify({requestId:uuid(requestId++),id,blockId:1,expectedRevision:revision,action,...(action==='Save'?{document:invoiceDocument()}:{confirmed:true}),...extra})])).rows[0].result;
+ const contact=async(version,name='Alice Changed',resident=1)=>(await db.query('select update_resident_contact(1,$1,$2,$3,$4,$5) result',[resident,version,name,'contact@test.invalid','789'])).rows[0].result;
+ const signIns=async(block=1)=>(await db.query('select * from read_resident_account_sign_ins($1) order by resident_id',[block])).rows;
+ await as('manager@test.invalid');assert.equal((await signIns())[0].state,'signed_in');await assert.rejects(signIns(2),e=>e.code==='42501');
+ let saved=await contact(1);assert.equal(saved.resident.contact_version,2);assert.equal(saved.resident.email,'old@test.invalid');assert.deepEqual((await signIns())[0].last_sign_in_at,before.auth[0].last_sign_in_at);await assert.rejects(contact(1),e=>e.code==='40001');
+ assert.equal((await db.query('select * from resident_contact_history')).rows.length,1);assert.equal((await contact(2)).changed,false);
+ await assert.rejects(run('Save',uuid(700),0),/writes have not been activated/);
+ await db.exec('reset role;update private.client_invoice_configuration set writes_enabled=true,issuing_enabled=false');await as('manager@test.invalid');const id=uuid(701);let result=await run('Save',id,0);assert.equal(result.invoice.status,'Draft');assert.equal(result.invoice.invoice_number,null);
+ await assert.rejects(run('Review',id,1),/Owner or admin/);await as('owner@test.invalid');result=await run('Review',id,1);assert.equal(result.invoice.status,'Reviewed');assert.match(buildClientInvoicePdf(result.invoice).text,/DRAFT - NOT ISSUED/);await assert.rejects(run('Issue',id,2),/issuing has not been activated/);
+ // Issuing is enabled only in this disposable DB to verify the existing full lifecycle.
+ await db.exec('reset role;update private.client_invoice_configuration set issuing_enabled=true');await as('admin@test.invalid');result=await run('Issue',id,2);assert.equal(result.invoice.invoice_number,'MCI-00000001');const issued=result.invoice;await contact(2,'Admin contact update');assert.deepEqual((await signIns())[0].last_sign_in_at,before.auth[0].last_sign_in_at);
+ result=await run('Void',id,3,{reason:'Synthetic fixture correction'});assert.equal(result.invoice.invoice_number,issued.invoice_number);assert.equal((await db.query("select snapshot->>'invoice_number' n from client_invoice_events where action='Issue'")).rows[0].n,issued.invoice_number);
+ await db.exec("update residents set archived_at=now() where id=1");await assert.rejects(contact(4),/Restore this resident/);await db.exec('update residents set archived_at=null where id=1');assert.equal((await db.query('select contact_version from residents where id=1')).rows[0].contact_version,5);await contact(1,'Carol Updated',3);assert.equal((await db.query('select count(*)::int n from residents')).rows[0].n,3);
+ for(const email of ['old@test.invalid','contact@test.invalid','contractor@test.invalid','blank@test.invalid','other@test.invalid']){await as(email);await assert.rejects(signIns(),e=>e.code==='42501');await assert.rejects(contact(5),e=>e.code==='42501');await assert.rejects(run('Save',uuid(702),0),/Manager block access/);assert.equal((await db.query('select * from resident_contact_history where resident_id=1')).rows.length,0);assert.equal((await db.query('select * from client_invoices')).rows.length,0);}
+ await as('owner@test.invalid');await assert.rejects(db.exec('delete from resident_contact_history'),e=>e.code==='42501');await assert.rejects(db.exec('update client_invoice_events set actor=\'forged\''),e=>e.code==='42501');await assert.rejects(db.exec('select * from auth.users'),e=>e.code==='42501');
+ for(const role of ['anon','service_role']){await as('owner@test.invalid',role);await assert.rejects(signIns(),e=>e.code==='42501');await assert.rejects(contact(5),e=>e.code==='42501');await assert.rejects(run('Save',uuid(703),0),e=>e.code==='42501');}
+ await db.exec('reset role;update private.client_invoice_configuration set writes_enabled=false,issuing_enabled=false');await as('owner@test.invalid');await assert.rejects(run('Save',uuid(704),0),/writes have not been activated/);
+ assert.deepEqual(await snapshot(),before);
+ await db.exec('update private.client_invoice_configuration set writes_enabled=true,issuing_enabled=false');assert.deepEqual((await db.query('select writes_enabled,issuing_enabled from private.client_invoice_configuration')).rows,[{writes_enabled:true,issuing_enabled:false}]);
+ console.log('PASS: all three exact proposals install together; original/Auth/ownership/ledger/Storage rows preserved; scoped contact edits and audit/archive/version conflicts; original email still drives sign-in; resident/contractor/foreign/anon/service denial; draft/review mode with final Issue blocked; synthetic full lifecycle and immutable invoice audit; independent master freeze and return to planned draft-only configuration.');
+}finally{await db.close()}

@@ -1,5 +1,5 @@
 import {NextRequest} from 'next/server';
-import {clientInvoiceAccess,clientInvoiceReply as reply} from '../../../lib/client-invoice-access';
+import {clientInvoiceAccess,clientInvoiceIssuingEnabled,clientInvoiceReply as reply} from '../../../lib/client-invoice-access';
 import {CLIENT_INVOICE_PAGE_SIZE,validateClientInvoiceRequest,type ClientInvoiceRecord} from '../../../lib/client-invoices';
 import {buildClientInvoicePdf} from '../../../lib/client-invoice-pdf';
 import {londonDate} from '../../../lib/service-charges';
@@ -18,6 +18,7 @@ export async function POST(request:NextRequest){
  try{const raw=await request.text();if(new TextEncoder().encode(raw).length>110000)throw Error('Invoice request is too large.');body=validateClientInvoiceRequest(JSON.parse(raw));}catch(error){return reply({error:error instanceof Error?error.message:'Invalid invoice request.'},400);}
  const access=await clientInvoiceAccess(body.blockId);if(access.response)return access.response;
  if(body.action!=='Save'&&!['owner','admin'].includes(access.member.role))return reply({error:'Only an owner or admin may review, issue or void client invoices.'},403);
+ if(body.action==='Issue'&&!clientInvoiceIssuingEnabled())return reply({error:'Final invoice issuing is disabled pending approved issuer details.',uncertain:false},403);
  if(['Review','Issue'].includes(body.action)){
   const {data:saved,error}=await access.client.from('client_invoices').select('*').eq('id',body.id).eq('block_id',body.blockId).maybeSingle();
   if(error)return reply({error:'Saved client invoices could not be read.'},503);if(!saved)return reply({error:'Saved invoice unavailable.'},404);
