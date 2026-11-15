@@ -1,3 +1,4 @@
+import {parseResidentSignIns,type ResidentSignIn} from "../lib/resident-sign-in";
 import {sourcePercentageString} from "../lib/budget-import";
 import ReviewPage from "./review/page";
 import {isHostedReviewPreview} from "../lib/review-access";
@@ -44,10 +45,18 @@ export default async function Home() {
     financialYearEnd: row.financial_year_end, myBlockManExportEnabled: row.myblockman_export_enabled,
   }));
   const units: Unit[] = (unitResult.data ?? []).map(row => ({ id: row.id, blockId: row.block_id, unitNumber: row.unit_number, paymentReference:row.payment_reference, serviceChargePercentage:savedShares.get(row.id)??null }));
-  const residents: Resident[] = (residentResult.data ?? []).map(row => ({ id: row.id, unitId: row.unit_id, blockId: row.block_id, archivedAt:row.archived_at, fullName: row.full_name, email: row.email, phone: row.phone }));
+  const residentSignInsEnabled=process.env.LONDON_RESIDENT_SIGN_INS_ENABLED==='true';
+  const signIns=new Map<number,ResidentSignIn>();
+  if(residentSignInsEnabled){
+    const results=await Promise.all(blocks.map(async block=>{
+      try{const {data,error}=await supabase.rpc('read_resident_account_sign_ins',{p_block_id:block.id});if(error)return;const parsed=parseResidentSignIns(data);const allowedIds=new Set((residentResult.data??[]).filter(row=>row.block_id===block.id).map(row=>row.id));return [...parsed].filter(([id])=>allowedIds.has(id));}catch{return;}
+    }));
+    for(const entries of results)for(const [id,info] of entries??[])signIns.set(id,info);
+  }
+  const residents: Resident[] = (residentResult.data ?? []).map(row => ({ signIn:residentSignInsEnabled?(signIns.get(row.id)??{state:"unavailable",lastSignInAt:null}):undefined,id: row.id, unitId: row.unit_id, blockId: row.block_id, archivedAt:row.archived_at, fullName: row.full_name, email: row.email, phone: row.phone }));
   const workOrders: WorkOrder[] = (workOrderResult.data ?? []).map(row => ({ id:row.id, isOngoing:row.is_ongoing===true,workOrderNumber:row.work_order_number, blockId:row.block_id, unitId:row.unit_id, residentId:row.resident_id, contractorId:row.contractor_id, title:row.title, description:row.description, category:row.category, priority:row.priority, status:row.status, contractor:row.contractor, estimatedCost:row.estimated_cost===null?null:Number(row.estimated_cost), actualCost:row.actual_cost===null?null:Number(row.actual_cost), notes:row.notes, addressSnapshot:row.address_snapshot, paymentStatus:row.payment_status, paymentApprovedBy:row.payment_approved_by, paymentApprovedAt:row.payment_approved_at, paidAt:row.paid_at, createdBy:row.created_by, createdAt:row.created_at, updatedAt:row.updated_at }));
   const contractors: Contractor[] = (contractorResult.data ?? []).map(row => ({id:row.id,companyName:row.company_name,contactName:row.contact_name,email:row.email,phone:row.phone,trade:row.trade,companyRegistration:row.company_registration,vatNumber:row.vat_number,status:row.status,expiryPauseReason:row.expiry_pause_reason,notes:row.notes,createdAt:row.created_at,updatedAt:row.updated_at}));
   const contractorDocuments: ContractorDocument[] = (contractorDocumentResult.data ?? []).map(row => ({id:row.id,contractorId:row.contractor_id,documentType:row.document_type,fileName:row.file_name,storagePath:row.storage_path,mimeType:row.mime_type,fileSize:row.file_size,expiryDate:row.expiry_date,notes:row.notes,uploadedAt:row.uploaded_at}));
   const buildingSafetyRecords: BuildingSafetyRecord[] = (buildingSafetyResult.data ?? []).map(row => ({id:row.id,blockId:row.block_id,category:row.category,title:row.title,status:row.status,dueDate:row.due_date,notes:row.notes,fileName:row.file_name,storagePath:row.storage_path,createdBy:row.created_by,createdAt:row.created_at,updatedAt:row.updated_at}));
-  return <Portal serviceCharges={serviceCharges??[]} today={londonDate()} tenantRequests={tenantRequests??[]} blocks={blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} contractorDocuments={contractorDocuments} buildingSafetyRecords={buildingSafetyRecords} isManager={isManager} memberRole={membership?.role??null} portfolioManager={membership?.portfolio_manager??null} viewerEmail={email} canPostBatches={process.env.LONDON_LEDGER_BATCHES_ENABLED==="1"} />;
+  return <Portal residentSignInsEnabled={residentSignInsEnabled} serviceCharges={serviceCharges??[]} today={londonDate()} tenantRequests={tenantRequests??[]} blocks={blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} contractorDocuments={contractorDocuments} buildingSafetyRecords={buildingSafetyRecords} isManager={isManager} memberRole={membership?.role??null} portfolioManager={membership?.portfolio_manager??null} viewerEmail={email} canPostBatches={process.env.LONDON_LEDGER_BATCHES_ENABLED==="1"} />;
 }
