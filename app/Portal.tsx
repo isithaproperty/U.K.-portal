@@ -3,6 +3,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 const BuildingStatement=dynamic(()=>import("./BuildingStatement"));
 const ManagementReview=dynamic(()=>import("./ManagementReview"));
+const ClientInvoiceRegister=dynamic(()=>import("./ClientInvoiceRegister"));
 import dashboardLogo from "../public/aviaf-dashboard-logo.png";
 import {useState} from "react";
 import BlockRegister from "./BlockRegister";
@@ -19,11 +20,11 @@ import ManagementAlerts from "./ManagementAlerts";
 import CommunicationRegister from "./CommunicationRegister";
 import type {Block,Unit,Resident,WorkOrder,Contractor,ContractorDocument,BuildingSafetyRecord} from "./types";
 
-type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"finance"|"messages"|"review"|"statement";
-const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Health & Safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["finance","Service charges","£"],["statement","Building statement","▤"],["messages","Communications","□"],["review","Management review","◇"]];
+type View="overview"|"buildings"|"block"|"units"|"golden"|"maintenance"|"contractors"|"finance"|"messages"|"review"|"statement"|"client-invoices";
+const nav:[View,string,string][]=[["overview","Portfolio overview","⌂"],["buildings","Buildings","▦"],["units","Units & residents","◎"],["golden","Health & Safety","◇"],["maintenance","Work orders","⌁"],["contractors","Contractors","♢"],["finance","Service charges","£"],["statement","Building statement","▤"],["client-invoices","Client invoices","£"],["messages","Communications","□"],["review","Management review","◇"]];
 const headings=["Building registration","Safety case","Fire safety","Structural safety","Plans & drawings","Maintenance & inspections","Changes & refurbishments","Mandatory occurrences","Incidents & emergencies","Resident engagement","Complaints & concerns","Audit & assurance"];
 
-export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail,canPostBatches=false}:{canPostBatches?:boolean;serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
+export default function Portal({serviceCharges,today,tenantRequests,blocks,units,residents:allResidents,workOrders,contractors,contractorDocuments,buildingSafetyRecords,isManager,memberRole,portfolioManager,viewerEmail,canPostBatches=false,clientInvoicesEnabled=false}:{clientInvoicesEnabled?:boolean;canPostBatches?:boolean;serviceCharges:ChargeEntry[];today:string;tenantRequests:TenantRequest[];blocks:Block[];units:Unit[];residents:Resident[];workOrders:WorkOrder[];contractors:Contractor[];contractorDocuments:ContractorDocument[];buildingSafetyRecords:BuildingSafetyRecord[];isManager:boolean;memberRole:string|null;portfolioManager:string|null;viewerEmail:string}){
  const [reviewTab,setReviewTab]=useState(0),[reviewBlock,setReviewBlock]=useState<number|null>(null);
  const [paymentWorkOrder,setPaymentWorkOrder]=useState<number|undefined>();
  function openWorkOrderPayment(blockId:number,workOrderId?:number){setReviewTab(2);setReviewBlock(blockId);setPaymentWorkOrder(workOrderId);setView("review");}
@@ -35,7 +36,8 @@ export default function Portal({serviceCharges,today,tenantRequests,blocks,units
   try{const {createClient}=await import("../lib/supabase/browser");const {error}=await createClient().auth.signOut({scope:"local"});if(error)throw error;window.location.replace("/login");}
   catch{setSignOutError("Could not sign out. Please try again.");setSigningOut(false);}
  }
- const visibleNav=isManager?nav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
+ const enabledNav=nav.filter(([key])=>key!=="client-invoices"||clientInvoicesEnabled);
+ const visibleNav=isManager?enabledNav:nav.filter(([key])=>["overview","buildings","golden"].includes(key));
  const ownUnits=units.filter(unit=>residents.some(resident=>resident.unitId===unit.id&&resident.email===viewerEmail));
  const viewerName=isManager?viewerEmail.split("@")[0].split(/[._-]/).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(" "):residents.find(resident=>resident.email===viewerEmail)?.fullName??"Resident";
  return <main className="app-shell">
@@ -51,6 +53,7 @@ export default function Portal({serviceCharges,today,tenantRequests,blocks,units
    {view==="contractors"&&isManager&&<ContractorRegister contractors={contractors} documents={contractorDocuments}/>}
    {view==="finance"&&<ServiceChargeRegister isManager={isManager} canPostBatches={canPostBatches} residents={residents} blocks={blocks} units={units} entries={serviceCharges} today={today}/>}
    {view==="statement"&&isManager&&<BuildingStatement blocks={blocks} today={today}/>}
+   {view==="client-invoices"&&isManager&&clientInvoicesEnabled&&<ClientInvoiceRegister blocks={blocks} today={today} canApprove={memberRole==="owner"||memberRole==="admin"}/>}
    {view==="messages"&&isManager&&<CommunicationRegister blocks={blocks} residents={residents}/>}
    {view==="review"&&isManager&&<ManagementReview initialWorkOrderId={paymentWorkOrder} key={`${reviewTab}:${reviewBlock}`} initialTab={reviewTab} blocks={reviewBlock?[...blocks.filter(b=>b.id===reviewBlock),...blocks.filter(b=>b.id!==reviewBlock)]:blocks} units={units} residents={residents} workOrders={workOrders} contractors={contractors} entries={serviceCharges} today={today} canRecordSettlements={memberRole==="owner"}/>}
   </div></section></main>
