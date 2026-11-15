@@ -68,22 +68,27 @@ create function private.validate_client_invoice_document(p jsonb,ready boolean) 
 language plpgsql immutable set search_path='' as $$
 declare line jsonb;party jsonb;k text;v text;registered boolean;q bigint;price bigint;rate bigint;net bigint;vat bigint;total_net bigint:=0;total_vat bigint:=0;seen uuid[]:='{}';line_id uuid;dates text[]:='{}';whitespace text:=U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF';
 begin
- if not private.client_invoice_keys(p,array['version','currency','issuer','client','periodStart','periodEnd','invoiceDate','dueDate','reference','paymentInstructions','notes','lines']) or p->'version' is distinct from '1'::jsonb or p->>'currency' is distinct from 'GBP' or octet_length(p::text)>100000 then raise exception 'Invalid GBP client invoice document';end if;
- if not private.client_invoice_keys(p->'issuer',array['name','address','email','companyNumber','vatRegistered','vatNumber']) or not private.client_invoice_keys(p->'client',array['name','address','email']) or jsonb_typeof(p#>'{issuer,vatRegistered}') is distinct from 'boolean' then raise exception 'Explicit issuer, client and VAT configuration required';end if;
+ if not private.client_invoice_keys(p,array['version','currency','invoiceType','supplyDate','vatTaxPoint','issuer','client','periodStart','periodEnd','invoiceDate','dueDate','reference','paymentInstructions','notes','lines']) or p->'version' is distinct from '1'::jsonb or p->>'currency' is distinct from 'GBP' or octet_length(p::text)>100000 then raise exception 'Invalid GBP client invoice document';end if;
+ if not private.client_invoice_keys(p->'issuer',array['name','address','email','phone','companyNumber','vatRegistered','vatNumber']) or not private.client_invoice_keys(p->'client',array['name','address','email']) or jsonb_typeof(p#>'{issuer,vatRegistered}') is distinct from 'boolean' then raise exception 'Explicit issuer, client and VAT configuration required';end if;
  registered:=(p#>>'{issuer,vatRegistered}')::boolean;
+ if jsonb_typeof(p->'invoiceType') is distinct from 'string' or (p->>'invoiceType') not in ('unselected','non-vat','vat') or (ready and p->>'invoiceType'='unselected') or registered is distinct from (p->>'invoiceType'='vat') then raise exception 'Choose an invoice type consistent with confirmed issuer VAT status';end if;
  for party in select p->'issuer' union all select p->'client' loop
   perform private.client_invoice_label(party,'name',200,ready,ready);perform private.client_invoice_label(party,'address',1000,ready,ready);
   v:=private.client_invoice_label(party,'email',200,false,ready);if v<>'' and v !~ ('^[^'||whitespace||'@]+@[^'||whitespace||'@]+\.[^'||whitespace||'@]+$') then raise exception 'Invalid invoice contact email';end if;
  end loop;
+ v:=private.client_invoice_label(p->'issuer','phone',80,false,ready);
+ if v<>'' and (v!~'^\+?[0-9 ()-]{3,80}$' or length(regexp_replace(v,'[^0-9]','','g'))<3) then raise exception 'Invalid supplier contact phone';end if;
+ if ready and p#>>'{issuer,email}'='' and v='' then raise exception 'Supplier contact email or phone required';end if;
  perform private.client_invoice_label(p->'issuer','companyNumber',100,false,ready);
  v:=private.client_invoice_label(p->'issuer','vatNumber',100,ready and registered,ready);
  if not registered and v<>'' then raise exception 'VAT number requires explicit registration';end if;
  foreach k in array array['reference','paymentInstructions','notes'] loop perform private.client_invoice_label(p,k,case when k='reference' then 200 else 2000 end,false,ready);end loop;
- foreach k in array array['periodStart','periodEnd','invoiceDate','dueDate'] loop
-  v:=private.client_invoice_label(p,k,10,ready,false);
+ foreach k in array array['periodStart','periodEnd','invoiceDate','dueDate','supplyDate','vatTaxPoint'] loop
+  v:=private.client_invoice_label(p,k,10,ready and (k<>'vatTaxPoint' or registered),false);
   if v<>'' and (v!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}$' or to_char(v::date,'YYYY-MM-DD')<>v) then raise exception 'Invalid client invoice date';end if;
   dates:=array_append(dates,v);
  end loop;
+ if not registered and dates[6]<>'' then raise exception 'VAT tax point requires VAT invoice type';end if;
  if dates[1]<>'' and dates[2]<>'' and dates[2]<dates[1] or dates[3]<>'' and dates[4]<>'' and dates[4]<dates[3] then raise exception 'Invoice dates must be in order';end if;
  if jsonb_typeof(p->'lines') is distinct from 'array' or jsonb_array_length(p->'lines')>50 or ready and jsonb_array_length(p->'lines')<1 then raise exception 'Choose up to 50 invoice lines';end if;
  for line in select value from jsonb_array_elements(p->'lines') loop

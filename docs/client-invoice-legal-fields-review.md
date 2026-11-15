@@ -1,5 +1,7 @@
 # Generated client invoice review — 15 November 2026
 
+> Historical findings at `5932671`. The missing-contact/supply-date gaps and sample hashes below are superseded by [the implemented field update](client-invoice-legal-fields-update.md). Issuer-dependent checks remain pending.
+
 Reviewed the renderer and validator at `593267143f76168f88c8cae60e275632d664364b` against the two requested primary sources. This is a field/configuration review, not verification of an actual issuer, tax status or transaction. The real issuer and VAT status remain unknown. No database mutation RPC, real invoice issue, email, financial posting, deployment or migration was performed. Both proposed database write/issue gates remain default false; no production configuration was changed.
 
 ## Local synthetic evidence

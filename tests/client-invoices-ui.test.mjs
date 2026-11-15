@@ -44,3 +44,12 @@ test('uncertain issue freezes editing and block switching; inspect then retry ke
 test('finding the uncertain request in audit history resolves it without another mutation',async()=>{
  const h=harness(),row=invoiceRecord({status:'Reviewed',revision:2});await h.open(row);h.nodes().filter(n=>n.tag==='input'&&n.props.type==='checkbox').at(-1).props.onChange({target:{checked:true}});h.render();h.button('Issue final invoice').props.onClick();const post=h.next(c=>c.options.method==='POST'),requestId=JSON.parse(post.options.body).requestId;await h.settle(post,{error:'Uncertain',uncertain:true},503);h.button('Reload saved invoice and audit history').props.onClick();await h.settle(h.next(c=>c.url===`/api/client-invoices/${row.id}`),{invoice:invoiceRecord({status:'Issued',revision:3,invoice_number:'MCI-00000001',issued_at:'2026-01-01'}),history:[{revision:3,action:'Issue',actor:'owner@example.invalid',occurred_at:'2026-01-01',request_id:requestId}],historyCount:3});assert.equal(h.button('Retry identical request'),undefined);assert.equal(h.calls.filter(c=>c.options.method==='POST').length,1);assert.ok(h.nodes().some(n=>n.tag==='a'&&n.props.href.includes('?revision=3')));
 });
+test('invoice type and tax point are explicit and selecting VAT never supplies a tax rate',async()=>{
+ const h=harness();await h.open();
+ const type=()=>h.nodes().find(n=>n.tag==='select'&&n.props.value==='non-vat');assert.ok(type());
+ type().props.onChange({target:{value:'vat'}});h.render();
+ assert.ok(h.nodes().some(n=>n.tag==='label'&&h.text(n).startsWith('VAT tax point')));assert.ok(h.nodes().some(n=>n.tag==='label'&&h.text(n).startsWith('Supply date')));
+ assert.equal(h.nodes().find(n=>n.tag==='label'&&h.text(n).startsWith('Reviewed VAT rate')).children.find(n=>n?.tag==='input').props.value,0);
+ const select=h.nodes().find(n=>n.tag==='select'&&n.props.value==='vat');select.props.onChange({target:{value:'non-vat'}});h.render();assert.equal(h.nodes().some(n=>n.tag==='label'&&h.text(n).startsWith('VAT tax point')),false);
+ h.button('Save draft').props.onClick();const payload=JSON.parse(h.calls.at(-1).options.body);assert.equal(payload.document.invoiceType,'non-vat');assert.equal(payload.document.vatTaxPoint,'');assert.equal(payload.document.issuer.phone,'');
+});
