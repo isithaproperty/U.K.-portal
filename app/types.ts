@@ -1,3 +1,4 @@
+import type {ResidentSignIn} from "../lib/resident-sign-in";
 import type {ChargeDocumentSettings} from "../lib/service-charge-document";
 export type Block = {
   documentSettings?: ChargeDocumentSettings;
@@ -13,7 +14,7 @@ export type Block = {
 };
 
 export type Unit = { serviceChargePercentage?: string | null; paymentReference: string | null; id: number; blockId: number; unitNumber: string };
-export type Resident = { contactEmail?:string|null; contactVersion?:number; archivedAt?:string|null; id: number; unitId: number; blockId: number; fullName: string; email: string; phone: string | null };
+export type Resident = { signIn?:ResidentSignIn; contactEmail?:string|null; contactVersion?:number; archivedAt?:string|null; id: number; unitId: number; blockId: number; fullName: string; email: string; phone: string | null };
 
 export type Contractor = { id:number; companyName:string; contactName:string|null; email:string|null; phone:string|null; trade:string; companyRegistration:string|null; vatNumber:string|null; status:"Pending"|"Approved"|"Suspended"; expiryPauseReason:string; notes:string; createdAt:string; updatedAt:string };
 export type ContractorDocument = { id:number; contractorId:number; documentType:string; fileName:string; storagePath:string; mimeType:string|null; fileSize:number|null; expiryDate:string|null; notes:string; uploadedAt:string };
