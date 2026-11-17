@@ -1,7 +1,9 @@
 -- Fix building-safety file scope using the deployed policy names.
 -- Review and test in staging before running against production.
--- Does not change records, bucket visibility or staff/admin policies.
+-- Does not change records, bucket visibility, grants or separate admin policies.
 begin;
+set local lock_timeout='5s';
+set local statement_timeout='30s';
 
 alter policy "portfolio scoped safety storage read" on storage.objects
 using (
@@ -12,7 +14,7 @@ using (
     join public.blocks b on b.id::text = split_part(objects.name, '/', 1)
     where m.email = lower((select auth.jwt()->>'email'))
       and (m.role = 'owner'
-        or (m.role = 'manager' and m.portfolio_manager = b.manager))
+        or (m.role = 'manager' and length(btrim(m.portfolio_manager)) > 0 and m.portfolio_manager = b.manager))
   )
 );
 
@@ -25,7 +27,7 @@ with check (
     join public.blocks b on b.id::text = split_part(objects.name, '/', 1)
     where m.email = lower((select auth.jwt()->>'email'))
       and (m.role = 'owner'
-        or (m.role = 'manager' and m.portfolio_manager = b.manager))
+        or (m.role = 'manager' and length(btrim(m.portfolio_manager)) > 0 and m.portfolio_manager = b.manager))
   )
 );
 
@@ -38,7 +40,7 @@ using (
     join public.blocks b on b.id::text = split_part(objects.name, '/', 1)
     where m.email = lower((select auth.jwt()->>'email'))
       and (m.role = 'owner'
-        or (m.role = 'manager' and m.portfolio_manager = b.manager))
+        or (m.role = 'manager' and length(btrim(m.portfolio_manager)) > 0 and m.portfolio_manager = b.manager))
   )
 );
 
