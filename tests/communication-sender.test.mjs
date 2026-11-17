@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process';
 import {canManageBlock} from '../lib/manager-cover.ts';
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -7,7 +8,7 @@ import * as helpers from "../lib/communication-recipients.ts";
 const requestId="11111111-1111-4111-8111-111111111111";
 const contacts={contacts:[{id:"c1",blockId:1,role:"Leaseholder",emails:["owner@example.com","joint@example.com"],communications:true},{id:"c2",blockId:1,role:"Tenant",emails:["tenant@example.com"],communications:true}]};
 const activeResidents=[{id:1,email:"owner@example.com",block_id:1},{id:2,email:"tenant@example.com",block_id:1}];
-function harness({email="manager@example.com",blockManager="Portfolio A",role="owner",manager="Portfolio A",missingContacts=false,failProvider=false,failPublication=false}={}){
+function harness({sourceOverride=null,email="manager@example.com",blockManager="Portfolio A",role="owner",manager="Portfolio A",missingContacts=false,failProvider=false,failPublication=false}={}){
  const tables={portal_members:[{email,role,portfolio_manager:manager}],blocks:[{id:1,name:"Example block",manager:blockManager}],residents:structuredClone(activeResidents),management_review_state:[{block_id:1,area:"leaseholders",revision:1,state:structuredClone(contacts)}],communication_delivery_requests:[],communications:[]};
  const calls=[];let publicationFails=failPublication,providerFails=failProvider;
  class Query{
@@ -30,7 +31,7 @@ function harness({email="manager@example.com",blockManager="Portfolio A",role="o
  let handler;const fakeProvider=async(url,request)=>{calls.push({url,...request});assert.equal(tables.communication_delivery_requests.length,1,"durable reservation must precede the provider");if(providerFails){providerFails=false;throw new Error("Mock network interruption");}return new Response(JSON.stringify({data:JSON.parse(request.body).map((_,i)=>({id:`mock-provider-${i}`}))}),{status:200});};
  const environment={SUPABASE_URL:"https://example.invalid",SUPABASE_SERVICE_ROLE_KEY:"fake-service-key",RESEND_API_KEY:"fake-provider-key",RESEND_FROM_EMAIL:"example@example.com"};
  const imports={...helpers,canManageBlock,deliverCommunicationBatch:(emails,id,index,key)=>helpers.deliverCommunicationBatch(emails,id,index,key,fakeProvider)};
- const source=readFileSync(new URL("../supabase/functions/resident-communication/index.ts",import.meta.url),"utf8").replace(/^import[^\n]*\n/gm,"");
+ const source=(sourceOverride??readFileSync(new URL("../supabase/functions/resident-communication/index.ts",import.meta.url),"utf8")).replace(/^import[^\n]*\n/gm,"");
  const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
  new Function("Deno","createClient",...Object.keys(imports),compiled)({serve:fn=>{handler=fn;},env:{get:key=>environment[key]}},()=>({auth:{getUser:async token=>({data:{user:token==="test-token"?{email}:null},error:null})},from:table=>new Query(table)}),...Object.values(imports));
  async function body(audience="saved-contacts"){
@@ -74,4 +75,11 @@ test('named reciprocal communication cover preserves the real actor and denies u
   const denied=harness({email,manager,blockManager:'Bobby',role:'manager'});assert.equal((await denied.invoke(await denied.body())).status,403);assert.equal(denied.calls.length,0);
  }
  const h=harness({email:'lookalike@test.invalid',manager:'Ramiro Naidoo',blockManager:'Jillian',role:'manager'});assert.equal((await h.invoke(await h.body())).status,403);assert.equal(h.calls.length,0);
+});
+
+test('resident communication Edge rollback separately removes covered sender access',async()=>{
+ const sourceOverride=execFileSync('git',['show','471f09f:supabase/functions/resident-communication/index.ts'],{encoding:'utf8'});
+ const options={email:'ramiro@aviaf.co.uk',manager:'Ramiro Naidoo',blockManager:'Jillian',role:'manager'};
+ const current=harness(options);assert.equal((await current.invoke(await current.body())).status,200);
+ const old=harness({...options,sourceOverride});assert.equal((await old.invoke(await old.body())).status,403);assert.equal(old.calls.length,0);assert.equal(old.tables.communication_delivery_requests.length,0);
 });

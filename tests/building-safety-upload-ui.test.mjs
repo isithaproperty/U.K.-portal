@@ -1,14 +1,14 @@
 import {validateSafetyDocument,SAFETY_DOCUMENT_ACCEPT} from '../lib/building-safety-upload.ts';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import ts from 'typescript';
 const source=readFileSync(new URL('../app/BuildingSafetyRegister.tsx',import.meta.url),'utf8').replace(/^import.*\n/gm,'').replace('export default function','function');const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.None,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React}}).outputText;
-function harness({uploadError=null,saveError=null,throws=false}={}){
+function harness({email='OWNER@Example.invalid',blockId=1,uploadError=null,saveError=null,throws=false}={}){
  let cursor=0,tree;const state=[],refs=[],calls=[],refreshes=[];
  const useState=initial=>{const i=cursor++;if(!(i in state))state[i]=initial;return[state[i],v=>state[i]=typeof v==='function'?v(state[i]):v]};const useRef=initial=>{const i=cursor++;return refs[i]??={current:initial}};
  const React={createElement:(tag,props,...children)=>({tag,props:props??{},children:children.flat(Infinity)})};
- const client={auth:{getUser:async()=>({data:{user:{email:'OWNER@Example.invalid'}}})},storage:{from(bucket){return{async upload(path,file,options){calls.push({kind:'upload',bucket,path,file,options});if(throws)throw Error('Network unavailable');return {error:uploadError}},async remove(){calls.push({kind:'remove'});return {error:null}}}}},from(table){return{async insert(payload){calls.push({kind:'insert',table,payload});return {error:saveError}}}}};
+ const client={auth:{getUser:async()=>({data:{user:{email}}})},storage:{from(bucket){return{async upload(path,file,options){calls.push({kind:'upload',bucket,path,file,options});if(throws)throw Error('Network unavailable');return {error:uploadError}},async remove(){calls.push({kind:'remove'});return {error:null}}}}},from(table){return{async insert(payload){calls.push({kind:'insert',table,payload});return {error:saveError}}}}};
  const deps={SAFETY_DOCUMENT_ACCEPT,React,useState,useRef,useMemo:fn=>fn(),useRouter:()=>({refresh:()=>refreshes.push(true)}),createClient:()=>client,styles:new Proxy({},{get:(_,key)=>key}),setTimeout:fn=>fn(),validateSafetyDocument};
  const Component=new Function(...Object.keys(deps),`${js};return BuildingSafetyRegister;`)(...Object.values(deps));
- const props={blocks:[{id:1,name:'Synthetic Court',address:'Synthetic',units:1}],records:[]};function render(){cursor=0;tree=Component(props)}
+ const props={blocks:[{id:blockId,name:'Synthetic Court',address:'Synthetic',units:1}],records:[]};function render(){cursor=0;tree=Component(props)}
  function nodes(){const out=[];const walk=n=>{if(n&&typeof n==='object'){out.push(n);n.children.forEach(walk)}};walk(tree);return out}const text=n=>typeof n==='string'?n:(n?.children??[]).map(text).join('');const button=label=>nodes().find(n=>n.tag==='button'&&text(n)===label);
  function choose(file={name:'synthetic.pdf',type:'application/pdf',size:100}){const input=nodes().find(n=>n.tag==='input'&&n.props.ref);input.props.onChange({target:{files:[file],value:'selected'}});render()}
  render();return{render,nodes,text,button,choose,calls,refreshes};
@@ -29,4 +29,11 @@ test('rapid duplicate submissions cannot create duplicate upload/record attempts
 test('oversized files are rejected before Storage and existing General/Insurance forms still render',async()=>{
  const h=harness();h.choose({name:'huge.pdf',type:'application/pdf',size:10485761});h.nodes().find(n=>n.tag==='input'&&n.props.required).props.onChange({target:{value:'Synthetic'}});h.render();await h.nodes().find(n=>n.tag==='form').props.onSubmit({preventDefault(){}});assert.equal(h.calls.length,0);
  for(const section of ['General Health & Safety','Insurance']){const other=harness();other.button(section).props.onClick();other.render();other.choose();assert.ok(other.nodes().some(n=>n.tag==='form'));}
+});
+
+test('combined covered-portfolio form retains selected block and the actual covering manager identity',async()=>{
+ for(const [email,blockId] of [['ramiro@aviaf.co.uk',2],['jillian@aviaf.co.uk',1]]){
+  const h=harness({email,blockId});h.choose();h.nodes().find(n=>n.tag==='input'&&n.props.required).props.onChange({target:{value:'Synthetic covered report'}});h.render();await h.nodes().find(n=>n.tag==='form').props.onSubmit({preventDefault(){}});
+  assert.equal(h.calls[0].bucket,'building-safety-documents');assert.ok(h.calls[0].path.startsWith(blockId+'/'));assert.equal(h.calls[1].payload.block_id,blockId);assert.equal(h.calls[1].payload.created_by,email);assert.equal(h.refreshes.length,1);
+ }
 });

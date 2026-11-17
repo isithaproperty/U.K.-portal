@@ -36,10 +36,22 @@ try{
  }
  // Existing independent admin policies (not changed by the proposal).
  for(const table of ['blocks','units','residents','work_orders','building_safety_records','service_charge_entries','building_cashflow_rows','management_review_state'])await db.exec(`create policy admin_all on public.${table} for all to authenticated using(exists(select 1 from portal_members m where m.email=auth.jwt()->>'email' and m.role='admin')) with check(exists(select 1 from portal_members m where m.email=auth.jwt()->>'email' and m.role='admin'))`);
+ for(const command of ['select','insert','delete'])await db.exec(`create policy "admin safety storage ${command}" on storage.objects for ${command} to authenticated ${command==='insert'?'with check':'using'} (bucket_id='building-safety-documents' and exists(select 1 from portal_members m where m.email=lower(auth.jwt()->>'email') and m.role='admin'))`);
  for(const f of snapshot.functions)await db.exec(f.definition);
  const staff=JSON.parse(await readFile('tests/fixtures/manager-cover-staff-storage.json','utf8'));await db.exec(staff.definition);await db.exec('revoke all on function private.staff_wo_storage_access(text,boolean) from public,anon,service_role;grant execute on function private.staff_wo_storage_access(text,boolean) to authenticated');
  for(const p of [...JSON.parse(await readFile('tests/fixtures/manager-cover-indirect-policies.json','utf8')),...staff.policies]){const target=quote(p.schema)+'.'+quote(p.table);await db.exec(`alter table ${target} enable row level security;create policy ${quote(p.name)} on ${target} for ${p.cmd} to ${p.roles.map(quote).join(',')}${p.qual?' using ('+p.qual+')':''}${p.check?' with check ('+p.check+')':''}`);}
  await db.exec("insert into contractors(id,email) values(9,'contractor@test.invalid');update work_orders set contractor_id=9;insert into work_order_dispatches(id,work_order_id,block_id,contractor_id,recipient_email) values(1001,101,1,9,'contractor@test.invalid'),(1002,102,2,9,'contractor@test.invalid'),(1003,103,3,9,'contractor@test.invalid');");
+ // Existing unchanged contact audit and owner-only payment functions from the deployed source.
+ const contactSource=await readFile('docs/proposed-resident-contact-edit.sql','utf8');
+ for(const name of ['private.stamp_resident_contact_version','private.audit_resident_contact_update','public.update_resident_contact']){const definition=[...contactSource.matchAll(/create function [\s\S]*?\$\$;/g)].map(m=>m[0]).find(d=>d.startsWith('create function '+name+'('));assert.ok(definition,name);await db.exec(definition);}
+ await db.exec(`revoke all on function private.stamp_resident_contact_version(),private.audit_resident_contact_update(),public.update_resident_contact(bigint,bigint,bigint,text,text,text) from public,anon,authenticated,service_role;
+ grant execute on function public.update_resident_contact(bigint,bigint,bigint,text,text,text) to authenticated;
+ create trigger stamp_resident_contact_version before update on residents for each row execute function private.stamp_resident_contact_version();
+ create trigger audit_resident_contact_update after update on residents for each row execute function private.audit_resident_contact_update();`);
+ const supplierSource=await readFile('supabase/supplier_settlements.sql','utf8');
+ for(const name of ['private.record_supplier_settlement','public.record_supplier_settlement']){const definition=[...supplierSource.matchAll(/create or replace function [\s\S]*?\$\$;/g)].map(m=>m[0]).find(d=>d.startsWith('create or replace function '+name+'('));assert.ok(definition,name);await db.exec(definition);}
+ await db.exec(`revoke all on function private.record_supplier_settlement(bigint,jsonb),public.record_supplier_settlement(bigint,jsonb) from public,anon,service_role;
+ grant execute on function private.record_supplier_settlement(bigint,jsonb),public.record_supplier_settlement(bigint,jsonb) to authenticated;`);
  // Reproduce current production operation grants and function ACLs, rather than relying on local defaults.
  for(const t of tables)await db.exec(`revoke all on ${quote(t.schema)}.${quote(t.table)} from public,anon,authenticated,service_role`);
  for(const t of privileges.tables){const operations=['select','insert','update','delete'].filter(k=>t[k]);if(operations.length)await db.exec(`grant ${operations.join(',')} on ${quote(t.schema)}.${quote(t.table)} to ${quote(t.role)}`);}
@@ -54,9 +66,10 @@ try{
  // Cross-cover must not implicitly authorize or conceal the separate H&S correction.
  await assert.rejects(db.exec(proposal),/Reviewed policy changed: portfolio scoped safety storage/);await db.exec('rollback');
  assert.equal((await db.query("select to_regprocedure('public.manager_portfolio_matches(text,text,text)') is null absent")).rows[0].absent,true);
- await db.exec(await readFile('tests/fixtures/manager-cover-safety-prerequisite.sql','utf8'));
+ assert.equal(await readFile('supabase/building_safety_storage_scope.sql','utf8'),await readFile('tests/fixtures/manager-cover-safety-prerequisite.sql','utf8'));
+ await db.exec(await readFile('supabase/building_safety_storage_scope.sql','utf8'));
  await db.exec(proposal);assert.deepEqual(await rowsBefore(),before);
- const as=async(email,role='authenticated')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({email,sub:'00000000-0000-0000-0000-000000000001',user_metadata:{role:'owner',portfolio_manager:'Bobby'}})]);await db.exec(`set role ${role}`)};
+ const as=async(email,role='authenticated')=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claims',$1,false)",[JSON.stringify({email,sub:email==='jillian@aviaf.co.uk'?'00000000-0000-0000-0000-000000000002':'00000000-0000-0000-0000-000000000001',user_metadata:{role:'owner',portfolio_manager:'Bobby'}})]);await db.exec(`set role ${role}`)};
  const ids=async(table,key=table==='bank_contractor_reconciliations'?'cashflow_row_id':'id')=>(await db.query(`select ${key} from ${table} order by ${key}`)).rows.map(r=>Number(r[key]));
  for(const email of ['ramiro@aviaf.co.uk','jillian@aviaf.co.uk']){
   await as(email);
@@ -66,9 +79,20 @@ try{
   assert.equal((await db.query("update blocks set name='Denied' where id=3 returning id")).rows.length,0);
   await assert.rejects(db.exec("update blocks set manager='Ramiro Naidoo' where id=2"),e=>e.code==='42501');
   await assert.rejects(db.exec("update portal_members set role='owner' where email='"+email+"'"),e=>e.code==='42501');
+  assert.equal((await db.query('delete from work_orders where id=103 returning id')).rows.length,0);
+  assert.equal((await db.query('delete from building_safety_records where id=3 returning id')).rows.length,0);
+  await db.query("insert into work_orders(id,block_id,title,created_by) values(1102,2,'Synthetic covered delete',$1)",[email]);assert.equal((await db.query('delete from work_orders where id=1102 returning id')).rows.length,1);
+  await db.query("insert into building_safety_records(id,block_id,title,created_by) values(1002,2,'Synthetic covered delete',$1)",[email]);assert.equal((await db.query('delete from building_safety_records where id=1002 returning id')).rows.length,1);
+  await assert.rejects(db.exec('delete from residents where id=2'),e=>e.code==='42501');
   assert.equal((await db.query('select private.client_invoice_can_manage(2,false) ok')).rows[0].ok,true);
   assert.equal((await db.query('select private.client_invoice_can_manage(2,true) ok')).rows[0].ok,false);
   assert.equal((await db.query('select private.can_manage_resident_contact(2) ok')).rows[0].ok,true);
+  const version=(await db.query('select contact_version from residents where id=2')).rows[0].contact_version;
+  const updated=(await db.query('select update_resident_contact(2,2,$1,$2,$3,$4) result',[version,'Synthetic edited by '+email,'contact@test.invalid','123'])).rows[0].result;
+  assert.equal(updated.resident.email,'j@test.invalid');assert.equal(updated.resident.unit_id,22);assert.equal(updated.resident.block_id,2);
+  const audit=(await db.query('select actor_email,actor_id from resident_contact_history order by version desc limit 1')).rows[0];assert.equal(audit.actor_email,email);assert.equal(audit.actor_id,email==='jillian@aviaf.co.uk'?'00000000-0000-0000-0000-000000000002':'00000000-0000-0000-0000-000000000001');
+  await assert.rejects(db.query("select record_supplier_settlement(2,'{}')"),e=>e.code==='42501'&&/Owner access required/.test(e.message));
+  await assert.rejects(db.query("select private.approve_block_statement(2,'[]','[{}]',1,true)"),e=>e.code==='42501'&&/Owner access required/.test(e.message));
   assert.equal((await db.query('select private.staff_can_manage_wo_document(102) ok')).rows[0].ok,true);assert.equal((await db.query('select private.staff_can_manage_wo_document(103) ok')).rows[0].ok,false);
   assert.equal((await db.query('select private.can_access_work_order_dispatch(1002,true) ok')).rows[0].ok,true);assert.equal((await db.query('select private.can_access_work_order_dispatch(1003,true) ok')).rows[0].ok,false);
   const file=`102/00000000-0000-0000-0000-00000000000${email.startsWith('ramiro')?'1':'2'}/invoice.pdf`;
@@ -79,7 +103,7 @@ try{
   assert.equal((await db.query('select * from private.read_resident_account_sign_ins(2)')).rows.length,1);
   await assert.rejects(db.query('select * from private.read_resident_account_sign_ins(3)'),e=>e.code==='42501');
  }
- await as('bobby@aviaf.co.uk');assert.deepEqual(await ids('blocks'),[1,2,3,4]);assert.equal((await db.query('select private.client_invoice_can_manage(3,true) ok')).rows[0].ok,true);
+ await as('bobby@aviaf.co.uk');assert.deepEqual(await ids('blocks'),[1,2,3,4]);await assert.rejects(db.query("select record_supplier_settlement(2,'{}')"),e=>e.code==='42501'&&/Owner access required/.test(e.message));assert.equal((await db.query('select private.client_invoice_can_manage(3,true) ok')).rows[0].ok,true);
  await as('other@test.invalid');assert.equal((await db.query("select public.manager_portfolio_matches('ramiro@aviaf.co.uk','Ramiro Naidoo','Jillian') ok")).rows[0].ok,true);assert.deepEqual(await ids('blocks'),[4]);
  await as('lookalike@test.invalid');assert.deepEqual(await ids('blocks'),[1]);
  for(const email of ['resident@test.invalid','contractor@test.invalid','missing@test.invalid']){await as(email);assert.deepEqual(await ids('blocks'),[]);assert.equal((await db.query('select private.client_invoice_can_manage(2,false) ok')).rows[0].ok,false);}
@@ -96,8 +120,14 @@ try{
  await db.exec("reset role;update portal_members set portfolio_manager='Ramiro Naidoo' where email='ramiro@aviaf.co.uk'");assert.equal((await db.query("select status from management_dispatches where idempotency_key='synthetic-covered-claim'")).rows[0].status,'Failed');
  for(const role of ['anon','service_role']){await as('ramiro@aviaf.co.uk',role);await assert.rejects(db.query('select private.client_invoice_can_manage(2,false)'),e=>e.code==='42501');}
  // Separately reviewed H&S prerequisite plus cross-cover permits only canonical, assigned paths.
- for(const email of ['ramiro@aviaf.co.uk','jillian@aviaf.co.uk']){await as(email);assert.deepEqual((await db.query('select name from storage.objects order by name')).rows.map(r=>r.name),['1/synthetic.pdf','2/synthetic.pdf']);await db.exec("insert into storage.objects(bucket_id,name) values('building-safety-documents','2/"+email.split('@')[0]+".pdf')");await assert.rejects(db.exec("insert into storage.objects(bucket_id,name) values('building-safety-documents','3/denied.pdf')"),e=>e.code==='42501');await assert.rejects(db.exec("insert into storage.objects(bucket_id,name) values('building-safety-documents','../denied.pdf')"),e=>e.code==='42501');await db.exec("delete from storage.objects where name='2/"+email.split('@')[0]+".pdf'");}
+ for(const email of ['ramiro@aviaf.co.uk','jillian@aviaf.co.uk']){await as(email);assert.deepEqual((await db.query('select name from storage.objects order by name')).rows.map(r=>r.name),['1/synthetic.pdf','2/synthetic.pdf']);await db.exec("insert into storage.objects(bucket_id,name) values('building-safety-documents','2/"+email.split('@')[0]+".pdf')");await assert.rejects(db.exec("insert into storage.objects(bucket_id,name) values('building-safety-documents','3/denied.pdf')"),e=>e.code==='42501');assert.equal((await db.query("delete from storage.objects where bucket_id='building-safety-documents' and name='3/synthetic.pdf' returning name")).rows.length,0);await assert.rejects(db.exec("insert into storage.objects(bucket_id,name) values('building-safety-documents','../denied.pdf')"),e=>e.code==='42501');await db.exec("delete from storage.objects where name='2/"+email.split('@')[0]+".pdf'");}
+ // Cover follows future matching portfolio assignments continuously, without a leave-date switch.
+ await db.exec("reset role;insert into blocks(id,manager,name) values(5,'Jillian','Synthetic future block')");
+ for(const email of ['ramiro@aviaf.co.uk','jillian@aviaf.co.uk']){await as(email);assert.deepEqual(await ids('blocks'),[1,2,5]);}
+ await as('bobby@aviaf.co.uk');assert.deepEqual(await ids('blocks'),[1,2,3,4,5]);
+ await db.exec('reset role');const recoverySnapshot=(await db.query('select (select count(*)::int from resident_contact_history) history_count,(select count(*)::int from service_charge_entries) charge_count,(select count(*)::int from storage.objects) object_count')).rows[0];
  // Rollback restores exact original scope, without deleting financial/resident/object rows.
- await db.exec('reset role');await db.exec(await readFile('docs/rollback-named-manager-cover.sql','utf8'));await as('ramiro@aviaf.co.uk');assert.deepEqual(await ids('blocks'),[1]);await as('jillian@aviaf.co.uk');assert.deepEqual(await ids('blocks'),[2]);assert.deepEqual((await db.query('select name from storage.objects order by name')).rows.map(r=>r.name),['2/synthetic.pdf']);
- console.log('PASS: exact 42 policy / 18 function proposal installs atomically against catalog snapshot; rows preserved; both named managers own+cover; Bobby global; other/forged/role-changed/mapping-changed denial; manager reassignment and escalation denied; client approval denied; contact/sign-in scope; proposal refuses absent H&S prerequisite without partial changes; separately applied local H&S prerequisite permits scoped upload/read/delete; scheduled claim rechecks real approver and rejects revoked cover; production table/column/function privileges; rollback restores original scopes while retaining H&S correction.');
+ await db.exec('reset role');await db.exec(await readFile('docs/rollback-named-manager-cover.sql','utf8'));await as('ramiro@aviaf.co.uk');assert.deepEqual(await ids('blocks'),[1]);await as('jillian@aviaf.co.uk');assert.deepEqual(await ids('blocks'),[2,5]);assert.deepEqual((await db.query('select name from storage.objects order by name')).rows.map(r=>r.name),['2/synthetic.pdf']);
+ await db.exec('reset role');assert.deepEqual((await db.query('select (select count(*)::int from resident_contact_history) history_count,(select count(*)::int from service_charge_entries) charge_count,(select count(*)::int from storage.objects) object_count')).rows[0],recoverySnapshot);
+ console.log('PASS: exact 42 policy / 18 function proposal installs atomically against catalog snapshot; rows preserved; both named managers own+cover; Bobby global; other/forged/role-changed/mapping-changed denial; manager reassignment and escalation denied; client approval and actual owner-only payment RPCs denied; covered contact audit records retain actor email/ID and resident ownership; contact/sign-in scope; proposal refuses absent H&S prerequisite without partial changes; separately applied local H&S prerequisite permits scoped upload/read/delete; scheduled claim rechecks real approver and rejects revoked cover; production table/column/function privileges; future matching portfolio blocks and Bobby global access; rollback restores original scopes while retaining H&S correction and financial/audit/object rows.');
 }finally{await db.close()}
