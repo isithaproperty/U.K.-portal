@@ -8,7 +8,7 @@ type Context={params:Promise<{blockId:string}>};
 async function access(context:Context){
  const blockId=Number((await context.params).blockId);if(!Number.isSafeInteger(blockId)||blockId<1)throw new Error('Invalid block.');
  const client=await createClient(),{data:{user}}=await client.auth.getUser();if(!user?.email)throw new Error('Sign in required.');
- const {data:member}=await client.from('portal_members').select('role,portfolio_manager').eq('email',user.email.toLowerCase()).maybeSingle();
+ const {data:member}=await client.from('portal_members').select('email,role,portfolio_manager').eq('email',user.email.toLowerCase()).maybeSingle();
  const {data:block}=await client.from('blocks').select('id,manager').eq('id',blockId).maybeSingle();
  if(!member||!block||!canManageReviewBlock(member,block.manager))throw new Error('Manager access to this block required.');
  return {client,blockId,member};

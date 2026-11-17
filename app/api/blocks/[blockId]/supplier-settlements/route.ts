@@ -10,7 +10,7 @@ async function access(context:Context){
  if(!Number.isSafeInteger(blockId)||blockId<1)return {response:reply({error:"Invalid block."},400)};
  const client=await createClient(),{data:{user},error:authError}=await client.auth.getUser();
  if(authError||!user?.email)return {response:reply({error:"Sign in required."},401)};
- const {data:member,error:memberError}=await client.from("portal_members").select("role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
+ const {data:member,error:memberError}=await client.from("portal_members").select("email,role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
  const {data:block,error:blockError}=await client.from("blocks").select("id,manager").eq("id",blockId).maybeSingle();
  if(memberError||!member||blockError||!block||!canManageReviewBlock(member,block.manager))return {response:reply({error:"Manager block access required."},403)};
  return {client,member,blockId};

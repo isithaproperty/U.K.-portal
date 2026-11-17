@@ -9,7 +9,7 @@ export async function GET(request:NextRequest,context:Context){
  if(!Number.isSafeInteger(blockId)||blockId<1||!isCommunicationAudience(audience))return reply({error:"Select a valid block and audience."},400);
  const client=await createClient();const {data:{user},error:authError}=await client.auth.getUser();
  if(authError||!user?.email)return reply({error:"Sign in required."},401);
- const {data:member,error:memberError}=await client.from("portal_members").select("role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
+ const {data:member,error:memberError}=await client.from("portal_members").select("email,role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
  const {data:block,error:blockError}=await client.from("blocks").select("id,name,manager").eq("id",blockId).maybeSingle();
  if(memberError||!member||!canManageReviewBlock(member,block?.manager??""))return reply({error:"Manager access to this block is required."},403);
  if(blockError||!block)return reply({error:"Block unavailable."},404);

@@ -1,0 +1,1582 @@
+{
+  "tables": [
+    {
+      "role": "anon",
+      "table": "building_cashflow_rows",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "bulk_reminder_revisions",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "staff_work_order_documents",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "bank_contractor_reconciliations",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "migrations",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "client_invoice_configuration",
+      "delete": false,
+      "insert": false,
+      "schema": "private",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "client_invoices",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "client_invoice_events",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "buckets",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "s3_multipart_uploads_parts",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "s3_multipart_uploads",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "objects",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "units",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "resident_contact_history",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "portal_members",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "blocks",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "work_orders",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "contractors",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "residents",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "contractor_documents",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "contractor_onboarding",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "building_safety_records",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "contractor_trades",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "contractor_members",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "contractor_email_log",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "communications",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "tenant_requests",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "service_charge_entries",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "service_charge_document_settings",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "bank_statement_rows",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "resident_messages",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "work_order_dispatches",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "work_order_submissions",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "contractor_expiry_notices",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "buckets_analytics",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "anon",
+      "table": "buckets_vectors",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "vector_indexes",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "bucket_lifecycle_states",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "lifecycle_abandoned_artifacts",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "supplier_settlements",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "supplier_settlement_allocations",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "management_manager_alerts",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "management_review_history",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "management_dispatch_events",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "communication_delivery_requests",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "management_delivery_inbox",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "management_dispatches",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "management_review_state",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "standing_orders",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "anon",
+      "table": "standing_order_runs",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "building_cashflow_rows",
+      "delete": false,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "bulk_reminder_revisions",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "staff_work_order_documents",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "bank_contractor_reconciliations",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "migrations",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "client_invoice_configuration",
+      "delete": false,
+      "insert": false,
+      "schema": "private",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "client_invoices",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "client_invoice_events",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "buckets",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "s3_multipart_uploads_parts",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "s3_multipart_uploads",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "objects",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "units",
+      "delete": false,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "resident_contact_history",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "portal_members",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "blocks",
+      "delete": false,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "work_orders",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "contractors",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "residents",
+      "delete": false,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "contractor_documents",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "contractor_onboarding",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "building_safety_records",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "contractor_trades",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "contractor_members",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "contractor_email_log",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "communications",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "tenant_requests",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "service_charge_entries",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "service_charge_document_settings",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "bank_statement_rows",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "resident_messages",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "work_order_dispatches",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "work_order_submissions",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "contractor_expiry_notices",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "buckets_analytics",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "buckets_vectors",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "vector_indexes",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "bucket_lifecycle_states",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "lifecycle_abandoned_artifacts",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "supplier_settlements",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "supplier_settlement_allocations",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "management_manager_alerts",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "management_review_history",
+      "delete": false,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "management_dispatch_events",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "communication_delivery_requests",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "management_delivery_inbox",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "management_dispatches",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "authenticated",
+      "table": "management_review_state",
+      "delete": false,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "standing_orders",
+      "delete": false,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "authenticated",
+      "table": "standing_order_runs",
+      "delete": false,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "service_role",
+      "table": "building_cashflow_rows",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "bulk_reminder_revisions",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "staff_work_order_documents",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "bank_contractor_reconciliations",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "migrations",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "service_role",
+      "table": "client_invoice_configuration",
+      "delete": false,
+      "insert": false,
+      "schema": "private",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "service_role",
+      "table": "client_invoices",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "service_role",
+      "table": "client_invoice_events",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "service_role",
+      "table": "buckets",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "s3_multipart_uploads_parts",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "s3_multipart_uploads",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "objects",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "units",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "resident_contact_history",
+      "delete": false,
+      "insert": false,
+      "schema": "public",
+      "select": false,
+      "update": false
+    },
+    {
+      "role": "service_role",
+      "table": "portal_members",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "blocks",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "work_orders",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "contractors",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "residents",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "contractor_documents",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "contractor_onboarding",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "building_safety_records",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "contractor_trades",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "contractor_members",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "contractor_email_log",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "communications",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "tenant_requests",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "service_charge_entries",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "service_charge_document_settings",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "bank_statement_rows",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "resident_messages",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "work_order_dispatches",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "work_order_submissions",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "contractor_expiry_notices",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "buckets_analytics",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "buckets_vectors",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "service_role",
+      "table": "vector_indexes",
+      "delete": false,
+      "insert": false,
+      "schema": "storage",
+      "select": true,
+      "update": false
+    },
+    {
+      "role": "service_role",
+      "table": "bucket_lifecycle_states",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "lifecycle_abandoned_artifacts",
+      "delete": true,
+      "insert": true,
+      "schema": "storage",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "supplier_settlements",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "supplier_settlement_allocations",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "management_manager_alerts",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "management_review_history",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "management_dispatch_events",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "communication_delivery_requests",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "management_delivery_inbox",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "management_dispatches",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "management_review_state",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "standing_orders",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    },
+    {
+      "role": "service_role",
+      "table": "standing_order_runs",
+      "delete": true,
+      "insert": true,
+      "schema": "public",
+      "select": true,
+      "update": true
+    }
+  ],
+  "functions": [
+    {
+      "name": "client_invoice_can_manage",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "private",
+      "identity": "p_block bigint, p_approve boolean"
+    },
+    {
+      "name": "can_manage_resident_contact",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "private",
+      "identity": "p_block_id bigint"
+    },
+    {
+      "name": "read_resident_account_sign_ins",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "private",
+      "identity": "p_block_id bigint"
+    },
+    {
+      "name": "can_access_work_order_dispatch",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "private",
+      "identity": "p_id bigint, p_manager_only boolean"
+    },
+    {
+      "name": "run_contractor_expiry_check",
+      "grants": [
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": ""
+    },
+    {
+      "name": "post_saved_management_batch",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        },
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_block_id bigint, p_batch_id text, p_expected_revision bigint, p_rows jsonb"
+    },
+    {
+      "name": "claim_management_dispatches",
+      "grants": [
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_at timestamp with time zone, p_block_id bigint"
+    },
+    {
+      "name": "queue_management_dispatches",
+      "grants": [
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_rows jsonb, p_actor text"
+    },
+    {
+      "name": "reconcile_management_dispatch",
+      "grants": [
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_key text, p_action text, p_actor text, p_evidence text, p_provider_id text"
+    },
+    {
+      "name": "process_standing_orders",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        },
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_block_id bigint, p_today date"
+    },
+    {
+      "name": "save_standing_order",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        },
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_block_id bigint, p_config jsonb, p_revision integer"
+    },
+    {
+      "name": "stage_building_cashflow",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        },
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_block_id bigint, p_rows jsonb"
+    },
+    {
+      "name": "import_block_residents_with_shares",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        },
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_block_id bigint, p_rows jsonb"
+    },
+    {
+      "name": "bulk_reminder_row_current",
+      "grants": [
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_row management_dispatches, p_revision bigint, p_today date"
+    },
+    {
+      "name": "read_bulk_reminder_snapshot",
+      "grants": [
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        },
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_block_id bigint"
+    },
+    {
+      "name": "staff_can_manage_wo_document",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "private",
+      "identity": "p_id bigint"
+    },
+    {
+      "name": "approve_block_statement",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "private",
+      "identity": "p_block_id bigint, p_residents jsonb, p_contractors jsonb, p_revision bigint, p_confirmed boolean"
+    },
+    {
+      "name": "save_management_review",
+      "grants": [
+        {
+          "role": "authenticated",
+          "privilege": "EXECUTE"
+        },
+        {
+          "role": "service_role",
+          "privilege": "EXECUTE"
+        }
+      ],
+      "schema": "public",
+      "identity": "p_block_id bigint, p_area text, p_state jsonb, p_expected_revision bigint"
+    }
+  ]
+}

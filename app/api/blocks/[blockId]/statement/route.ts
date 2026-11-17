@@ -34,7 +34,7 @@ export async function GET(request:NextRequest,context:Context){
  try{
   const client=await createClient(),{data:{user},error:authError}=await client.auth.getUser();
   if(authError||!user?.email)return reply({error:"Sign in required."},401);
-  const {data:member,error:memberError}=await client.from("portal_members").select("role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
+  const {data:member,error:memberError}=await client.from("portal_members").select("email,role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
   const {data:block,error:blockError}=await client.from("blocks").select("id,manager").eq("id",blockId).maybeSingle();
   if(memberError||!member||blockError||!block||!canManageReviewBlock(member,block.manager))return reply({error:"Manager block access required."},403);
   const [unitRows,orderRows,entries,settlements,allocations,saved]=await Promise.all([

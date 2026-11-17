@@ -1,3 +1,4 @@
+import {canManageBlock} from '../../../../../lib/manager-cover';
 import {NextRequest,NextResponse} from 'next/server';
 import {createClient} from '../../../../../lib/supabase/server';
 import {GET as statementGET} from '../statement/route';
@@ -11,9 +12,9 @@ export async function GET(request:NextRequest,context:{params:Promise<{blockId:s
  const blockId=Number((await context.params).blockId),kind=request.nextUrl.searchParams.get('kind'),start=request.nextUrl.searchParams.get('start')??'',end=request.nextUrl.searchParams.get('end')??'';
  try{validateReportRange(start,end,londonDate());if(!Number.isSafeInteger(blockId)||blockId<1||!['units','buildings','client'].includes(kind??''))throw Error('Choose a valid report and building.');}catch(error){return reply({error:(error as Error).message},400);}
  const client=await createClient(),{data:{user},error:authError}=await client.auth.getUser();if(authError||!user?.email)return reply({error:'Sign in required.'},401);
- const {data:member,error:memberError}=await client.from('portal_members').select('role,portfolio_manager').eq('email',user.email.toLowerCase()).maybeSingle();
+ const {data:member,error:memberError}=await client.from('portal_members').select('email,role,portfolio_manager').eq('email',user.email.toLowerCase()).maybeSingle();
  const {data:block,error:blockError}=await client.from('blocks').select('id,name,address,manager').eq('id',blockId).maybeSingle();
- if(memberError||blockError||!block||!member||!(member.role==='owner'||member.role==='admin'||member.role==='manager'&&typeof member.portfolio_manager==='string'&&member.portfolio_manager.trim()!==''&&member.portfolio_manager===block.manager))return reply({error:'Staff access to this building is required.'},403);
+ if(memberError||blockError||!block||!member||!canManageBlock(member,block.manager))return reply({error:'Staff access to this building is required.'},403);
  const scope={id:block.id,name:block.name,address:block.address};
  try{
   if(kind==='client'){

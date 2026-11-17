@@ -1,3 +1,4 @@
+import {canManageBlock} from '../lib/manager-cover.ts';
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
@@ -6,8 +7,8 @@ import * as helpers from "../lib/communication-recipients.ts";
 const requestId="11111111-1111-4111-8111-111111111111";
 const contacts={contacts:[{id:"c1",blockId:1,role:"Leaseholder",emails:["owner@example.com","joint@example.com"],communications:true},{id:"c2",blockId:1,role:"Tenant",emails:["tenant@example.com"],communications:true}]};
 const activeResidents=[{id:1,email:"owner@example.com",block_id:1},{id:2,email:"tenant@example.com",block_id:1}];
-function harness({role="owner",manager="Portfolio A",missingContacts=false,failProvider=false,failPublication=false}={}){
- const tables={portal_members:[{email:"manager@example.com",role,portfolio_manager:manager}],blocks:[{id:1,name:"Example block",manager:"Portfolio A"}],residents:structuredClone(activeResidents),management_review_state:[{block_id:1,area:"leaseholders",revision:1,state:structuredClone(contacts)}],communication_delivery_requests:[],communications:[]};
+function harness({email="manager@example.com",blockManager="Portfolio A",role="owner",manager="Portfolio A",missingContacts=false,failProvider=false,failPublication=false}={}){
+ const tables={portal_members:[{email,role,portfolio_manager:manager}],blocks:[{id:1,name:"Example block",manager:blockManager}],residents:structuredClone(activeResidents),management_review_state:[{block_id:1,area:"leaseholders",revision:1,state:structuredClone(contacts)}],communication_delivery_requests:[],communications:[]};
  const calls=[];let publicationFails=failPublication,providerFails=failProvider;
  class Query{
   constructor(table){this.table=table;this.filters=[];this.mode="select";this.values=null;this.one=false;this.offset=0;this.end=999999;}
@@ -28,10 +29,10 @@ function harness({role="owner",manager="Portfolio A",missingContacts=false,failP
  }
  let handler;const fakeProvider=async(url,request)=>{calls.push({url,...request});assert.equal(tables.communication_delivery_requests.length,1,"durable reservation must precede the provider");if(providerFails){providerFails=false;throw new Error("Mock network interruption");}return new Response(JSON.stringify({data:JSON.parse(request.body).map((_,i)=>({id:`mock-provider-${i}`}))}),{status:200});};
  const environment={SUPABASE_URL:"https://example.invalid",SUPABASE_SERVICE_ROLE_KEY:"fake-service-key",RESEND_API_KEY:"fake-provider-key",RESEND_FROM_EMAIL:"example@example.com"};
- const imports={...helpers,deliverCommunicationBatch:(emails,id,index,key)=>helpers.deliverCommunicationBatch(emails,id,index,key,fakeProvider)};
+ const imports={...helpers,canManageBlock,deliverCommunicationBatch:(emails,id,index,key)=>helpers.deliverCommunicationBatch(emails,id,index,key,fakeProvider)};
  const source=readFileSync(new URL("../supabase/functions/resident-communication/index.ts",import.meta.url),"utf8").replace(/^import[^\n]*\n/gm,"");
  const compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
- new Function("Deno","createClient",...Object.keys(imports),compiled)({serve:fn=>{handler=fn;},env:{get:key=>environment[key]}},()=>({auth:{getUser:async token=>({data:{user:token==="test-token"?{email:"manager@example.com"}:null},error:null})},from:table=>new Query(table)}),...Object.values(imports));
+ new Function("Deno","createClient",...Object.keys(imports),compiled)({serve:fn=>{handler=fn;},env:{get:key=>environment[key]}},()=>({auth:{getUser:async token=>({data:{user:token==="test-token"?{email}:null},error:null})},from:table=>new Query(table)}),...Object.values(imports));
  async function body(audience="saved-contacts"){
   const resolved=helpers.resolveCommunicationRecipients(1,audience,activeResidents,audience==="saved-contacts"?contacts:null);
   return {blockIds:[1],audience,requestId,subject:"Block update",message:"Exact private message",previewFingerprints:{1:await helpers.communicationFingerprint({blockId:1,audience,revision:audience==="saved-contacts"?1:0,...resolved})}};
@@ -65,4 +66,12 @@ test("missing saved-contact storage fails closed while explicit legacy audience 
  const h=harness({missingContacts:true});assert.equal((await h.invoke(await h.body())).status,503);assert.equal(h.calls.length,0);
  const result=await h.invoke(await h.body("legacy-residents"));assert.equal(result.status,200);assert.equal(result.body.recipientCount,2);
  assert.equal((await h.invoke(null)).status,400);assert.equal((await h.invoke({})).status,400);assert.equal((await h.invoke(await h.body(),"invalid-token")).status,401);
+});
+
+test('named reciprocal communication cover preserves the real actor and denies unrelated portfolios before mocked transport',async()=>{
+ for(const [email,manager,blockManager] of [['ramiro@aviaf.co.uk','Ramiro Naidoo','Jillian'],['jillian@aviaf.co.uk','Jillian','Ramiro Naidoo']]){
+  const h=harness({email,manager,blockManager,role:'manager'});assert.equal((await h.invoke(await h.body())).status,200);assert.equal(h.calls.length,1);assert.equal(h.tables.communication_delivery_requests[0].sent_by,email);
+  const denied=harness({email,manager,blockManager:'Bobby',role:'manager'});assert.equal((await denied.invoke(await denied.body())).status,403);assert.equal(denied.calls.length,0);
+ }
+ const h=harness({email:'lookalike@test.invalid',manager:'Ramiro Naidoo',blockManager:'Jillian',role:'manager'});assert.equal((await h.invoke(await h.body())).status,403);assert.equal(h.calls.length,0);
 });

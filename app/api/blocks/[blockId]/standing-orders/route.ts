@@ -1,12 +1,13 @@
+import {canManageBlock} from "../../../../../lib/manager-cover";
 import {NextRequest,NextResponse} from "next/server";
 import {createClient} from "../../../../../lib/supabase/server";
 import {validateStandingOrder} from "../../../../../lib/standing-orders";
 async function access(raw:string){
  const blockId=Number(raw);if(!Number.isSafeInteger(blockId)||blockId<1)throw new Error("Invalid block.");
  const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user?.email)throw new Error("Sign in required.");
- const {data:member,error:memberError}=await supabase.from("portal_members").select("role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
+ const {data:member,error:memberError}=await supabase.from("portal_members").select("email,role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
  const {data:block,error:blockError}=await supabase.from("blocks").select("id,manager").eq("id",blockId).maybeSingle();
- if(memberError||blockError||!block||!member||!(member.role==="owner"||member.role==="admin"||member.role==="manager"&&member.portfolio_manager===block.manager))throw new Error("Manager access to this block is required.");
+ if(memberError||blockError||!block||!member||!canManageBlock(member,block.manager))throw new Error("Manager access to this block is required.");
  return {supabase,blockId};
 }
 export async function GET(_request:NextRequest,{params}:{params:Promise<{blockId:string}>}){

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "portfolio scoped safety storage delete",
+    "qual": "((bucket_id = 'building-safety-documents'::text) AND (name ~ '^[1-9][0-9]*/[^/]+$'::text) AND (EXISTS ( SELECT 1\n   FROM (portal_members m\n     JOIN blocks b ON (((b.id)::text = split_part(objects.name, '/'::text, 1))))\n  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (length(btrim(m.portfolio_manager)) > 0) AND (m.portfolio_manager = b.manager)))))))",
+    "check": null
+  },
+  {
+    "name": "portfolio scoped safety storage insert",
+    "qual": null,
+    "check": "((bucket_id = 'building-safety-documents'::text) AND (name ~ '^[1-9][0-9]*/[^/]+$'::text) AND (EXISTS ( SELECT 1\n   FROM (portal_members m\n     JOIN blocks b ON (((b.id)::text = split_part(objects.name, '/'::text, 1))))\n  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (length(btrim(m.portfolio_manager)) > 0) AND (m.portfolio_manager = b.manager)))))))"
+  },
+  {
+    "name": "portfolio scoped safety storage read",
+    "qual": "((bucket_id = 'building-safety-documents'::text) AND (name ~ '^[1-9][0-9]*/[^/]+$'::text) AND (EXISTS ( SELECT 1\n   FROM (portal_members m\n     JOIN blocks b ON (((b.id)::text = split_part(objects.name, '/'::text, 1))))\n  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (length(btrim(m.portfolio_manager)) > 0) AND (m.portfolio_manager = b.manager)))))))",
+    "check": null
+  }
+]

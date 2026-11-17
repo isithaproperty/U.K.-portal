@@ -1,3 +1,4 @@
+import {canManageBlock} from '../lib/manager-cover.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -32,7 +33,7 @@ test('edge send path places the frozen order amount in snapshot and email using 
  const rows={work_orders:{id:1,block_id:8,contractor_id:9,work_order_number:'WO-1',title:'Annual cleaning',status:'Open',estimated_cost:1200,payment_status:'Not approved',is_ongoing:true},blocks:{id:8,name:'Synthetic Court',manager:'London',address:'Example'},contractors:{id:9,company_name:'Synthetic supplier',email:'contractor@example.invalid',status:'Approved'},portal_members:{role:'owner'}};
  const db={auth:{getUser:async()=>({data:{user:{email:'owner@example.invalid'}},error:null})},rpc:async()=>({data:[],error:null}),from(table){const q={select(){return q;},eq(){return q;},upsert(value){snapshot=value.snapshot;return q;},update(){return q;},async maybeSingle(){return {data:rows[table]??null,error:null};},async single(){return {data:table==='work_order_dispatches'?{id:7}:rows[table],error:null};},then(resolve){resolve({error:null});}};return q;}};
  const Deno={serve(fn){handler=fn;},env:{get(name){return {SUPABASE_URL:'https://example.invalid',SUPABASE_SECRET_KEYS:'{"default":"synthetic"}',RESEND_API_KEY:'synthetic',RESEND_FROM_EMAIL:'noreply@example.invalid'}[name];}}};
- new Function('Deno','createClient','fetch','workOrderAmount','workOrderAmountDisplay',js)(Deno,()=>db,async(url,options)=>{assert.equal(url,'https://api.resend.com/emails');sent.push(JSON.parse(options.body));return {ok:true};},workOrderAmount,workOrderAmountDisplay);
+ new Function('Deno','createClient','fetch','workOrderAmount','workOrderAmountDisplay','canManageBlock',js)(Deno,()=>db,async(url,options)=>{assert.equal(url,'https://api.resend.com/emails');sent.push(JSON.parse(options.body));return {ok:true};},workOrderAmount,workOrderAmountDisplay,canManageBlock);
  const response=await handler(new Request('https://example.invalid',{method:'POST',headers:{Authorization:'Bearer synthetic','Content-Type':'application/json'},body:JSON.stringify({event:'send',workOrderId:1})}));
  assert.equal(response.status,200);assert.equal(snapshot.orderAmount.amountPence,120000);assert.equal(sent.length,1);assert.match(sent[0].html,/Estimated ongoing contract total: £1,200.00/);assert.match(sent[0].html,/annual total, not each monthly invoice/);
 });

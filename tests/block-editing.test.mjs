@@ -11,7 +11,7 @@ test('block editor preserves units and residents and rejects stale edits',()=>{
 });
 test('block editing checks current and target portfolio access',()=>{
  assert.match(route,/canManageReviewBlock\(member,String\(current.manager\)\)/);
- assert.match(route,/canManageReviewBlock\(member,String\(update.manager\)\)/);
+ assert.match(route,/update.manager!==current.manager/);
 });
 test('block dashboard exposes the existing non-destructive unit importer',()=>{
  const ui=readFileSync(new URL('../app/BlockDashboard.tsx',import.meta.url),'utf8');

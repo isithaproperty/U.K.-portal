@@ -10,7 +10,7 @@ export async function PATCH(request: NextRequest, {params}: {params: Promise<{bl
   const db=await createClient();
   const {data:{user}}=await db.auth.getUser();
   if(!user?.email)return reply("Sign in required.",401);
-  const {data:member}=await db.from("portal_members").select("role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
+  const {data:member}=await db.from("portal_members").select("email,role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
   const {data:block,error}=await db.from("blocks").select(fields.join(",")).eq("id",id).maybeSingle();
   if(error||!block)return reply("Block unavailable.",404);
   const current=block as unknown as Record<string,string|number>;
@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest, {params}: {params: Promise<{bl
   }
   const date=String(update.financial_year_end);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date)return reply("Enter a valid financial year end.",400);
-  if(!canManageReviewBlock(member,String(update.manager)))return reply("Only an owner or admin can reassign the manager.",403);
+  if(update.manager!==current.manager&&!["owner","admin"].includes(member?.role??""))return reply("Only an owner or admin can reassign the manager.",403);
   const {count,error:countError}=await db.from("units").select("id",{count:"exact",head:true}).eq("block_id",id);
   if(countError||count===null)return reply("Could not verify existing units.",503);
   if(Number(update.units)<count)return reply(`The count must include all ${count} existing units.`,400);

@@ -1,0 +1,746 @@
+-- Restore exact pre-cover definitions. No business rows or Storage files are restored.
+begin;
+alter policy "portfolio scoped unit insert" on "public"."units" with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = units.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped unit update" on "public"."units" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = units.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = units.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped resident insert" on "public"."residents" with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = residents.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped resident update" on "public"."residents" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = residents.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = residents.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped work order read" on "public"."work_orders" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = work_orders.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped work order insert" on "public"."work_orders" with check (((created_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = work_orders.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "portfolio scoped work order update" on "public"."work_orders" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = work_orders.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = work_orders.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped work order delete" on "public"."work_orders" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = work_orders.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped unit read" on "public"."units" using (((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = units.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))) OR (EXISTS ( SELECT 1
+   FROM residents r
+  WHERE ((r.unit_id = units.id) AND ((r.archived_at IS NULL) AND (r.email = lower(( SELECT (auth.jwt() ->> 'email'::text))))))))));
+alter policy "portfolio scoped resident read" on "public"."residents" using ((((archived_at IS NULL) AND (email = lower(( SELECT (auth.jwt() ->> 'email'::text))))) OR (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = residents.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "portfolio scoped block access" on "public"."blocks" using ((EXISTS ( SELECT 1
+   FROM portal_members m
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = blocks.manager)))))));
+alter policy "portfolio scoped safety read" on "public"."building_safety_records" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = building_safety_records.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped safety insert" on "public"."building_safety_records" with check (((created_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = building_safety_records.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "portfolio scoped safety update" on "public"."building_safety_records" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = building_safety_records.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = building_safety_records.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped safety delete" on "public"."building_safety_records" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = building_safety_records.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "portfolio scoped safety storage read" on "storage"."objects" using (((bucket_id = 'building-safety-documents'::text) AND (name ~ '^[1-9][0-9]*/[^/]+$'::text) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON (((b.id)::text = split_part(objects.name, '/'::text, 1))))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (length(btrim(m.portfolio_manager)) > 0) AND (m.portfolio_manager = b.manager))))))));
+alter policy "portfolio scoped safety storage insert" on "storage"."objects" with check (((bucket_id = 'building-safety-documents'::text) AND (name ~ '^[1-9][0-9]*/[^/]+$'::text) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON (((b.id)::text = split_part(objects.name, '/'::text, 1))))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (length(btrim(m.portfolio_manager)) > 0) AND (m.portfolio_manager = b.manager))))))));
+alter policy "portfolio scoped safety storage delete" on "storage"."objects" using (((bucket_id = 'building-safety-documents'::text) AND (name ~ '^[1-9][0-9]*/[^/]+$'::text) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON (((b.id)::text = split_part(objects.name, '/'::text, 1))))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (length(btrim(m.portfolio_manager)) > 0) AND (m.portfolio_manager = b.manager))))))));
+alter policy "portfolio managers add blocks" on "public"."blocks" with check ((EXISTS ( SELECT 1
+   FROM portal_members m
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = 'owner'::text) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = blocks.manager)))))));
+alter policy "management reads communications" on "public"."communications" using ((EXISTS ( SELECT 1
+   FROM portal_members m
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (NOT (EXISTS ( SELECT 1
+           FROM (unnest(communications.block_ids) bid(bid)
+             JOIN blocks b ON ((b.id = bid.bid)))
+          WHERE (b.manager IS DISTINCT FROM m.portfolio_manager))))))))));
+alter policy "managers read tenant requests" on "public"."tenant_requests" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = tenant_requests.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "managers update tenant requests" on "public"."tenant_requests" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = tenant_requests.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = tenant_requests.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "managers read unit charges" on "public"."service_charge_entries" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = service_charge_entries.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "managers add unit charges" on "public"."service_charge_entries" with check (((created_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM ((units u
+     JOIN blocks b ON ((b.id = u.block_id)))
+     JOIN portal_members m ON ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text))))))
+  WHERE ((u.id = service_charge_entries.unit_id) AND (u.block_id = service_charge_entries.block_id) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "managers correct unit charges" on "public"."service_charge_entries" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = service_charge_entries.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check (((created_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM ((units u
+     JOIN blocks b ON ((b.id = u.block_id)))
+     JOIN portal_members m ON ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text))))))
+  WHERE ((u.id = service_charge_entries.unit_id) AND (u.block_id = service_charge_entries.block_id) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "managers maintain development document settings" on "public"."service_charge_document_settings" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = service_charge_document_settings.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = service_charge_document_settings.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "managers read and maintain bank rows" on "public"."bank_statement_rows" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = bank_statement_rows.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = bank_statement_rows.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "managers preview resident communications" on "public"."resident_messages" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = resident_messages.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "scoped managers read review state" on "public"."management_review_state" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = management_review_state.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "scoped managers insert review state" on "public"."management_review_state" with check (((updated_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = management_review_state.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "scoped managers update review state" on "public"."management_review_state" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = management_review_state.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check (((updated_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = management_review_state.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "scoped managers read supplier settlements" on "public"."supplier_settlements" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = supplier_settlements.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "scoped managers see dispatches" on "public"."management_dispatches" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = management_dispatches.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "scoped managers queue approved exact recipients" on "public"."management_dispatches" with check (((approved_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (status = 'Pending'::text) AND (attempt_count = 0) AND (claim_token IS NULL) AND (claimed_at IS NULL) AND (sent_at IS NULL) AND (provider_message_id IS NULL) AND (delivery_status = 'Not established'::text) AND (delivered_at IS NULL) AND ((unit_id IS NULL) OR (EXISTS ( SELECT 1
+   FROM units u
+  WHERE ((u.id = management_dispatches.unit_id) AND (u.block_id = management_dispatches.block_id))))) AND management_dispatch_recipient_allowed(block_id, unit_id, kind, recipient) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = management_dispatches.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "scoped manager consultation alerts" on "public"."management_manager_alerts" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = management_manager_alerts.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "scoped managers maintain standing orders" on "public"."standing_orders" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = standing_orders.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))) with check (((confirmed_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM ((units u
+     JOIN blocks b ON ((b.id = u.block_id)))
+     JOIN portal_members m ON ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text))))))
+  WHERE ((u.id = standing_orders.unit_id) AND (u.block_id = standing_orders.block_id) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))))))));
+alter policy "scoped managers read standing order runs" on "public"."standing_order_runs" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = standing_order_runs.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager)))))));
+alter policy "scoped managers record standing order runs" on "public"."standing_order_runs" with check (((created_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM ((standing_orders s
+     JOIN blocks b ON ((b.id = s.block_id)))
+     JOIN portal_members m ON ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text))))))
+  WHERE ((s.id = standing_order_runs.order_id) AND (s.block_id = standing_order_runs.block_id) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (m.portfolio_manager = b.manager))) AND ((standing_order_runs.action = 'Invoice prepared'::text) OR (EXISTS ( SELECT 1
+           FROM service_charge_entries e
+          WHERE ((e.id = standing_order_runs.ledger_entry_id) AND (e.block_id = s.block_id) AND (e.unit_id = s.unit_id) AND (((standing_order_runs.action = 'Invoice posted'::text) AND (e.entry_type = 'Charge'::text)) OR ((standing_order_runs.action = 'Payment allocated'::text) AND (e.entry_type = 'Payment'::text) AND (EXISTS ( SELECT 1
+                   FROM bank_statement_rows r
+                  WHERE ((r.id = standing_order_runs.bank_row_id) AND (r.block_id = s.block_id) AND (r.unit_id = s.unit_id) AND (r.status = 'Posted'::text) AND (r.payment_entry_id = e.id)))))))))))))));
+alter policy "scoped managers read cash observations" on "public"."building_cashflow_rows" using ((EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = building_cashflow_rows.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (NULLIF(m.portfolio_manager, ''::text) IS NOT NULL) AND (m.portfolio_manager = b.manager)))))));
+alter policy "scoped managers stage cash observations" on "public"."building_cashflow_rows" with check (((imported_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1
+   FROM (portal_members m
+     JOIN blocks b ON ((b.id = building_cashflow_rows.block_id)))
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (NULLIF(m.portfolio_manager, ''::text) IS NOT NULL) AND (m.portfolio_manager = b.manager))))))));
+alter policy "portfolio scoped block update" on "public"."blocks" using ((EXISTS ( SELECT 1
+   FROM portal_members m
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (btrim(COALESCE(m.portfolio_manager, ''::text)) <> ''::text) AND (btrim(COALESCE(blocks.manager, ''::text)) <> ''::text) AND (m.portfolio_manager = blocks.manager))))))) with check ((EXISTS ( SELECT 1
+   FROM portal_members m
+  WHERE ((m.email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (btrim(COALESCE(m.portfolio_manager, ''::text)) <> ''::text) AND (btrim(COALESCE(blocks.manager, ''::text)) <> ''::text) AND (m.portfolio_manager = blocks.manager)))))));
+alter policy "scoped staff read reconciliation links" on "public"."bank_contractor_reconciliations" using ((EXISTS ( SELECT 1
+   FROM (blocks b
+     JOIN portal_members m ON ((m.email = lower((auth.jwt() ->> 'email'::text)))))
+  WHERE ((b.id = bank_contractor_reconciliations.block_id) AND ((m.role = ANY (ARRAY['owner'::text, 'admin'::text])) OR ((m.role = 'manager'::text) AND (NULLIF(m.portfolio_manager, ''::text) = b.manager)))))));
+CREATE OR REPLACE FUNCTION private.client_invoice_can_manage(p_block bigint, p_approve boolean DEFAULT false)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+ select auth.uid() is not null and exists(select 1 from public.portal_members m join public.blocks b on b.id=p_block where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (not p_approve and m.role='manager' and length(btrim(m.portfolio_manager))>0 and m.portfolio_manager=b.manager)));
+$function$
+;
+CREATE OR REPLACE FUNCTION private.can_manage_resident_contact(p_block_id bigint)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+ select auth.uid() is not null and exists(select 1 from public.portal_members m join public.blocks b on b.id=p_block_id where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (m.role='manager' and length(btrim(m.portfolio_manager))>0 and m.portfolio_manager=b.manager)));
+$function$
+;
+CREATE OR REPLACE FUNCTION private.read_resident_account_sign_ins(p_block_id bigint)
+ RETURNS TABLE(resident_id bigint, last_sign_in_at timestamp with time zone, state text)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+begin
+ if p_block_id is null or p_block_id<1 or auth.uid() is null or not exists(
+  select 1 from public.portal_members m join public.blocks b on b.id=p_block_id
+  where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (m.role='manager' and length(btrim(m.portfolio_manager))>0 and m.portfolio_manager=b.manager))
+ ) then raise exception 'Staff block access required' using errcode='42501';end if;
+ return query
+ with accounts as (
+  select r.id as rid,count(u.id) as matches,max(u.last_sign_in_at) as last_sign_in
+  from public.residents r left join auth.users u on lower(u.email)=lower(r.email) and u.deleted_at is null and not coalesce(u.is_anonymous,false)
+  where r.block_id=p_block_id group by r.id
+ )
+ select a.rid,
+ case when a.matches=1 and isfinite(a.last_sign_in) and a.last_sign_in<=statement_timestamp() then a.last_sign_in else null end,
+ case when a.matches=0 then 'no_account' when a.matches>1 then 'unavailable' when a.last_sign_in is null then 'never_recorded' when not isfinite(a.last_sign_in) or a.last_sign_in>statement_timestamp() then 'unavailable' else 'signed_in' end
+ from accounts a;
+end $function$
+;
+CREATE OR REPLACE FUNCTION private.can_access_work_order_dispatch(p_id bigint, p_manager_only boolean DEFAULT false)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+ select auth.uid() is not null and exists(select 1 from public.work_order_dispatches d join public.work_orders w on w.id=d.work_order_id join public.blocks b on b.id=d.block_id join public.contractors c on c.id=d.contractor_id where d.id=p_id and (
+ exists(select 1 from public.portal_members m where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager)))
+ or (not p_manager_only and d.recipient_email=lower(auth.jwt()->>'email') and w.contractor_id=d.contractor_id and lower(c.email)=d.recipient_email and w.status<>'Cancelled')
+ ));
+$function$
+;
+CREATE OR REPLACE FUNCTION public.run_contractor_expiry_check()
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare c record; expired jsonb; paused integer:=0; v_fingerprint text;
+begin
+ for c in select * from public.contractors where status in ('Approved','Suspended') for update loop
+  expired:=private.contractor_expired_documents(c.id);
+  if jsonb_array_length(expired)=0 then continue; end if;
+  if c.status='Approved' then update public.contractors set status='Suspended',expiry_pause_reason='Expired documents: '||(select string_agg(v->>'type',', ') from jsonb_array_elements(expired) v),updated_at=now() where id=c.id;paused:=paused+1;
+  elsif c.expiry_pause_reason='' then continue;end if;
+  v_fingerprint:=md5(expired::text);
+  if nullif(btrim(c.email),'') is not null then
+   insert into public.contractor_members(contractor_id,email) values(c.id,lower(btrim(c.email))) on conflict(contractor_id,email) do nothing;
+  end if;
+  insert into public.contractor_expiry_notices(contractor_id,fingerprint,recipient,payload)
+  select c.id,v_fingerprint,r.email,jsonb_build_object('company',c.company_name,'documents',expired,'contractorEmail',lower(btrim(c.email)),'renewalLink','https://london-property-portal.vercel.app/contractor/renewals/'||c.id,'managerLink','https://london-property-portal.vercel.app/')
+  from (select lower(btrim(c.email)) as email where nullif(btrim(c.email),'') is not null
+   union select m.email from public.portal_members m where m.role='manager' and exists(select 1 from public.work_orders w join public.blocks b on b.id=w.block_id where w.contractor_id=c.id and b.manager=m.portfolio_manager and w.status<>'Cancelled')
+   union select m.email from public.portal_members m where m.email=c.created_by and m.role in ('owner','admin','manager')
+  ) r on conflict(contractor_id,fingerprint,recipient) do nothing;
+ end loop;return paused;
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.post_saved_management_batch(p_block_id bigint, p_batch_id text, p_expected_revision bigint, p_rows jsonb)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare saved public.management_review_state%rowtype;imported integer;
+begin
+ if auth.uid() is null or not exists(select 1 from public.portal_members m join public.blocks b on b.id=p_block_id where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) then raise exception 'Manager block access required' using errcode='42501';end if;
+ select * into saved from public.management_review_state where block_id=p_block_id and area='financials' for update;
+ if not found or p_expected_revision is null or saved.revision<>p_expected_revision or p_batch_id is null or saved.state #>> '{prepared,input,batchId}' is distinct from p_batch_id then raise exception 'Saved financial batch changed' using errcode='40001';end if;
+ if p_rows is null or jsonb_typeof(p_rows)<>'array' or jsonb_array_length(p_rows) not between 1 and 500 then raise exception 'Provide 1 to 500 batch rows';end if;
+ if exists(select 1 from jsonb_array_elements(p_rows) item where nullif(item->>'request_id','') is null or coalesce(item->>'reference','')<>'' or item->>'entry_type' not in ('Charge','Credit')) then raise exception 'Only idempotent charge or credit rows are accepted';end if;
+ select public.import_service_charges(p_block_id,p_rows) into imported;
+ return imported;
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.claim_management_dispatches(p_at timestamp with time zone, p_block_id bigint DEFAULT NULL::bigint)
+ RETURNS SETOF management_dispatches
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare row public.management_dispatches%rowtype;
+begin
+ -- A crashed submission is uncertain, never automatically retried.
+ for row in update public.management_dispatches set status='Uncertain',error_message='Worker lease expired; reconcile provider acceptance before retrying' where kind not in ('Overdue account reminder','Friendly balance notice') and status='Sending' and claimed_at<p_at-interval '15 minutes' and (p_block_id is null or block_id=p_block_id) returning * loop
+  insert into public.management_dispatch_events(dispatch_key,block_id,event,detail) values(row.idempotency_key,row.block_id,'Uncertain',jsonb_build_object('reason',row.error_message));
+ end loop;
+ for row in select d.* from public.management_dispatches d where d.kind not in ('Overdue account reminder','Friendly balance notice') and d.status='Pending' and d.scheduled_at<=p_at and (p_block_id is null or d.block_id=p_block_id) order by d.scheduled_at,d.idempotency_key for update skip locked limit 1 loop
+  perform 1 from public.management_review_state where block_id=row.block_id and area in ('financials','debtors','leaseholders') for share;
+  if exists(select 1 from (values ('financials',row.envelope #>> '{sourceEvidence,financialRevision}'),('debtors',row.envelope #>> '{sourceEvidence,reminderRevision}'),('leaseholders',row.envelope #>> '{sourceEvidence,consultationRevision}'),('leaseholders',row.envelope #>> '{sourceEvidence,contactRevision}')) expected(area,revision) where expected.revision is not null and not exists(select 1 from public.management_review_state s where s.block_id=row.block_id and s.area=expected.area and s.revision::text=expected.revision)) or not public.management_dispatch_recipient_allowed(row.block_id,row.unit_id,row.kind,row.recipient) or not exists(select 1 from public.portal_members m join public.blocks b on b.id=row.block_id where m.email=row.approved_by and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) then
+   update public.management_dispatches set status='Failed',error_message='Saved source, recipient assignment or approving manager scope changed; review required' where idempotency_key=row.idempotency_key;
+   insert into public.management_dispatch_events(dispatch_key,block_id,event,detail) values(row.idempotency_key,row.block_id,'Approval invalidated','{}');continue;
+  end if;
+  update public.management_dispatches set status='Sending',claim_token=gen_random_uuid(),claimed_at=p_at,attempt_count=attempt_count+1 where idempotency_key=row.idempotency_key returning * into row;
+  insert into public.management_dispatch_events(dispatch_key,block_id,event,detail) values(row.idempotency_key,row.block_id,'Sending',jsonb_build_object('attempt',row.attempt_count));
+  return next row;
+ end loop;
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.queue_management_dispatches(p_rows jsonb, p_actor text)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare item jsonb;existing public.management_dispatches%rowtype;n integer:=0;
+begin
+ if nullif(btrim(p_actor),'') is null or jsonb_typeof(p_rows)<>'array' or jsonb_array_length(p_rows) not between 1 and 1000 then raise exception 'Provide an approved dispatch batch';end if;
+ for item in select value from jsonb_array_elements(p_rows) loop
+  if not exists(select 1 from public.portal_members m join public.blocks b on b.id=(item->>'block_id')::bigint where m.email=p_actor and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) or not public.management_dispatch_recipient_allowed((item->>'block_id')::bigint,(item->>'unit_id')::bigint,item->>'kind',item->>'recipient') then raise exception 'Verified manager and current recipient required' using errcode='42501';end if;
+  if (item->>'unit_id') is not null and not exists(select 1 from public.units where id=(item->>'unit_id')::bigint and block_id=(item->>'block_id')::bigint) then raise exception 'Unit outside block';end if;
+  insert into public.management_dispatches(idempotency_key,block_id,unit_id,operation_id,kind,recipient,envelope,scheduled_at,approved_by)
+  values(item->>'idempotency_key',(item->>'block_id')::bigint,(item->>'unit_id')::bigint,item->>'operation_id',item->>'kind',item->>'recipient',item->'envelope',(item->>'scheduled_at')::timestamptz,p_actor) on conflict(idempotency_key) do nothing;
+  if not found then
+   select * into existing from public.management_dispatches where idempotency_key=item->>'idempotency_key';
+   if not found or existing.envelope is distinct from item->'envelope' then raise exception 'Dispatch retry differs from saved snapshot';end if;
+  end if;n:=n+1;
+ end loop;return n;
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.reconcile_management_dispatch(p_key text, p_action text, p_actor text, p_evidence text, p_provider_id text DEFAULT NULL::text)
+ RETURNS void
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare row public.management_dispatches%rowtype;next_status text;
+begin
+ select * into row from public.management_dispatches where idempotency_key=p_key for update;
+ if not found or not exists(select 1 from public.portal_members m join public.blocks b on b.id=row.block_id where m.email=p_actor and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) then raise exception 'Manager scope required' using errcode='42501';end if;
+ if length(btrim(coalesce(p_evidence,'')))<10 then raise exception 'Authoritative reconciliation evidence required';end if;
+ if p_action='Cancel' and row.status in ('Pending','Failed') then next_status:='Cancelled';
+ elsif p_action='Retry' and row.status='Failed' then next_status:='Pending';
+ elsif p_action='Reconcile not accepted' and row.status='Uncertain' then next_status:='Failed';
+ elsif p_action='Reconcile accepted' and row.status='Uncertain' and nullif(btrim(p_provider_id),'') is not null then next_status:='Sent';
+ else raise exception 'Invalid dispatch transition; uncertain sends cannot be blindly retried';end if;
+ update public.management_dispatches set status=next_status,provider_message_id=case when next_status='Sent' then p_provider_id else provider_message_id end,sent_at=case when next_status='Sent' then clock_timestamp() else sent_at end,delivery_status=case when next_status='Sent' then 'Provider accepted' else delivery_status end,error_message=left(p_evidence,5000) where idempotency_key=p_key;
+ insert into public.management_dispatch_events(dispatch_key,block_id,event,detail) values(row.idempotency_key,row.block_id,p_action,jsonb_build_object('actor',p_actor,'evidence',left(p_evidence,5000),'providerId',p_provider_id));
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.process_standing_orders(p_block_id bigint, p_today date DEFAULT ((now() AT TIME ZONE 'Europe/London'::text))::date)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare s public.standing_orders%rowtype;bankrow public.bank_statement_rows%rowtype;v_date date;v_due date;v_actor text;v_id bigint;v_request uuid;v_year integer;v_q integer;v_index integer;v_step integer;v_matches integer;v_prepared integer:=0;v_invoices integer:=0;v_payments integer:=0;v_service boolean:=coalesce(auth.jwt()->>'role','')='service_role';v_description text;
+begin
+ if p_today is null or p_today>(now() at time zone 'Europe/London')::date then raise exception 'Processing date cannot be in the future';end if;
+ if not v_service and not exists(select 1 from public.portal_members m join public.blocks b on b.id=p_block_id where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) then raise exception 'Manager block access required' using errcode='42501';end if;
+ for s in select * from public.standing_orders where block_id=p_block_id and enabled and lease_confirmed and start_date<=p_today order by id for update loop
+  -- Re-check the approving manager has not lost authority since configuration was saved.
+  if not exists(select 1 from public.portal_members m join public.blocks b on b.id=s.block_id where m.email=s.confirmed_by and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) then continue;end if;
+  v_actor:=case when v_service then s.confirmed_by else lower(auth.jwt()->>'email') end;
+  -- Reject excessive history explicitly rather than silently stopping at period 500.
+  if s.cadence='english_quarterly' then
+   v_q:=case extract(month from s.start_date)::integer when 3 then 0 when 6 then 1 when 9 then 2 else 3 end+500;
+   v_year:=extract(year from s.start_date)::integer+v_q/4;
+   v_date:=case v_q%4 when 0 then make_date(v_year,3,25) when 1 then make_date(v_year,6,24) when 2 then make_date(v_year,9,29) else make_date(v_year,12,25) end;
+  else
+   v_step:=case s.cadence when 'annual' then 12 when 'half_yearly' then 6 else 3 end;
+   v_date:=(s.start_date+make_interval(months=>v_step*500))::date;
+  end if;
+  if v_date<=p_today then raise exception 'Standing order % exceeds 500 historical periods. Review and narrow its effective start date before processing.',s.id;end if;
+  for v_index in 0..499 loop
+   if s.cadence='english_quarterly' then
+    v_q:=case extract(month from s.start_date)::integer when 3 then 0 when 6 then 1 when 9 then 2 else 3 end+v_index;
+    v_year:=extract(year from s.start_date)::integer+v_q/4;
+    v_date:=case v_q%4 when 0 then make_date(v_year,3,25) when 1 then make_date(v_year,6,24) when 2 then make_date(v_year,9,29) else make_date(v_year,12,25) end;
+   else
+    v_step:=case s.cadence when 'annual' then 12 when 'half_yearly' then 6 else 3 end;
+    v_date:=(s.start_date+make_interval(months=>v_step*v_index))::date;
+   end if;
+   exit when v_date>p_today;
+   v_due:=v_date+s.due_offset_days;
+   if exists(select 1 from public.standing_order_runs where order_id=s.id and occurrence_date=v_date and action in ('Invoice prepared','Invoice posted')) then continue;end if;
+   if s.invoice_mode='invoice_review' then
+    insert into public.standing_order_runs(order_id,block_id,occurrence_date,action,snapshot,created_by) values(s.id,s.block_id,v_date,'Invoice prepared',jsonb_build_object('amountPence',s.amount_pence,'issueDate',v_date,'dueDate',v_due,'unitId',s.unit_id,'leaseReference',s.lease_reference,'revision',s.revision),v_actor) on conflict do nothing;
+    v_prepared:=v_prepared+1;
+   else
+    v_request:=md5('standing-order:'||s.id||':'||v_date)::uuid;
+    v_description:='Standing-order lease schedule · '||left(s.lease_reference,200);
+    insert into public.service_charge_entries(block_id,unit_id,entry_type,description,amount_pence,entry_date,due_date,reference,created_by,request_id) values(s.block_id,s.unit_id,'Charge',v_description,s.amount_pence,v_date,v_due,null,v_actor,v_request) on conflict(request_id) do nothing returning id into v_id;
+    if v_id is null then select id into v_id from public.service_charge_entries where request_id=v_request and block_id=s.block_id and unit_id=s.unit_id and entry_type='Charge' and amount_pence=s.amount_pence and entry_date=v_date and due_date=v_due; if not found then raise exception 'Existing standing-order invoice has conflicting details';end if;end if;
+    insert into public.standing_order_runs(order_id,block_id,occurrence_date,action,ledger_entry_id,snapshot,created_by) values(s.id,s.block_id,v_date,'Invoice posted',v_id,jsonb_build_object('amountPence',s.amount_pence,'issueDate',v_date,'dueDate',v_due,'unitId',s.unit_id,'leaseReference',s.lease_reference,'revision',s.revision),v_actor) on conflict do nothing;
+    v_invoices:=v_invoices+1;
+   end if;
+  end loop;
+  if s.allocation_mode='auto_exact_match' then
+   for bankrow in select r.* from public.bank_statement_rows r join public.units u on u.id=s.unit_id and u.block_id=s.block_id where r.block_id=s.block_id and r.status='Pending' and r.amount_pence=s.amount_pence and r.transaction_date between s.start_date and p_today and u.payment_reference is not null and upper(regexp_replace(r.bank_reference,'\s','','g'))=upper(regexp_replace(u.payment_reference,'\s','','g')) order by r.id for update of r loop
+    select count(*) into v_matches from public.units u where u.block_id=s.block_id and u.payment_reference is not null and upper(regexp_replace(u.payment_reference,'\s','','g'))=upper(regexp_replace(bankrow.bank_reference,'\s','','g'));
+    if v_matches<>1 then continue;end if;
+    -- Genuine imported bank receipt only. BANK:<id> and row locks match post_bank_payments.
+    insert into public.service_charge_entries(block_id,unit_id,entry_type,description,amount_pence,entry_date,due_date,reference,created_by) values(s.block_id,s.unit_id,'Payment',left(coalesce(nullif(bankrow.description,''),'Bank transfer')||' · '||bankrow.bank_reference,300),bankrow.amount_pence,bankrow.transaction_date,null,'BANK:'||bankrow.id,v_actor) returning id into v_id;
+    update public.bank_statement_rows set status='Posted',unit_id=s.unit_id,payment_entry_id=v_id,posted_at=now() where id=bankrow.id;
+    insert into public.standing_order_runs(order_id,block_id,occurrence_date,action,ledger_entry_id,bank_row_id,snapshot,created_by) values(s.id,s.block_id,bankrow.transaction_date,'Payment allocated',v_id,bankrow.id,jsonb_build_object('bankRowId',bankrow.id,'amountPence',bankrow.amount_pence,'unitId',s.unit_id),v_actor);
+    v_payments:=v_payments+1;
+   end loop;
+  end if;
+ end loop;
+ return jsonb_build_object('prepared',v_prepared,'invoices',v_invoices,'payments',v_payments);
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.save_standing_order(p_block_id bigint, p_config jsonb, p_revision integer)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare v public.standing_orders%rowtype;v_unit bigint:=(p_config->>'unitId')::bigint;
+begin
+ if p_revision is null or p_revision<0 then raise exception 'Valid revision required';end if;
+ if not exists(select 1 from public.portal_members m join public.blocks b on b.id=p_block_id where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) then raise exception 'Manager block access required' using errcode='42501'; end if;
+ if not exists(select 1 from public.units where id=v_unit and block_id=p_block_id) then raise exception 'Unit not in block';end if;
+ perform pg_advisory_xact_lock(hashtextextended('standing-order:'||v_unit,0));
+ select * into v from public.standing_orders where unit_id=v_unit for update;
+ if (found and (v.block_id<>p_block_id or v.revision<>p_revision)) or (not found and p_revision<>0) then raise exception 'Standing-order revision conflict' using errcode='40001';end if;
+ insert into public.standing_orders(block_id,unit_id,amount_pence,start_date,cadence,due_offset_days,invoice_mode,allocation_mode,enabled,lease_confirmed,lease_reference,confirmed_by)
+ values(p_block_id,v_unit,(p_config->>'amountPence')::bigint,(p_config->>'startDate')::date,p_config->>'cadence',(p_config->>'dueOffsetDays')::integer,p_config->>'invoiceMode',p_config->>'allocationMode',(p_config->>'enabled')::boolean,(p_config->>'leaseConfirmed')::boolean,trim(p_config->>'leaseReference'),lower(auth.jwt()->>'email'))
+ on conflict(unit_id) do update set amount_pence=excluded.amount_pence,start_date=excluded.start_date,cadence=excluded.cadence,due_offset_days=excluded.due_offset_days,invoice_mode=excluded.invoice_mode,allocation_mode=excluded.allocation_mode,enabled=excluded.enabled,lease_confirmed=excluded.lease_confirmed,lease_reference=excluded.lease_reference,confirmed_by=excluded.confirmed_by,updated_at=now(),revision=standing_orders.revision+1
+ returning * into v;
+ return to_jsonb(v);
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.stage_building_cashflow(p_block_id bigint, p_rows jsonb)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare item jsonb; v_id bigint; added integer:=0; duplicates integer:=0;
+begin
+ if auth.uid() is null or not exists(select 1 from public.portal_members m join public.blocks b on b.id=p_block_id
+  where m.email=lower(auth.jwt()->>'email') and
+  (m.role in ('owner','admin') or (m.role='manager' and nullif(m.portfolio_manager,'') is not null and m.portfolio_manager=b.manager))) then
+  raise exception 'Manager access to this building required' using errcode='42501';
+ end if;
+ if p_rows is null or jsonb_typeof(p_rows)<>'array' or jsonb_array_length(p_rows) not between 1 and 1000 then raise exception 'Provide 1 to 1000 cash observations';end if;
+ for item in select value from jsonb_array_elements(p_rows) loop
+  if jsonb_typeof(item)<>'object' then raise exception 'Invalid cash observation';end if;
+  insert into public.building_cashflow_rows(block_id,fingerprint,transaction_date,amount_pence,bank_reference,description,transaction_id,source_file,imported_by)
+  values(p_block_id,item->>'fingerprint',(item->>'transaction_date')::date,(item->>'amount_pence')::bigint,
+   item->>'bank_reference',item->>'description',item->>'transaction_id',item->>'source_file',lower(auth.jwt()->>'email'))
+  on conflict(block_id,fingerprint) do nothing returning id into v_id;
+  if v_id is null then
+   if exists(select 1 from public.building_cashflow_rows r where r.block_id=p_block_id and r.fingerprint=item->>'fingerprint'
+    and (r.transaction_date<>(item->>'transaction_date')::date or r.amount_pence<>(item->>'amount_pence')::bigint)) then
+    raise exception 'Existing bank transaction has a different date or signed amount';
+   end if;
+   duplicates:=duplicates+1;
+  else added:=added+1;end if;
+ end loop;
+ return jsonb_build_object('added',added,'duplicates',duplicates);
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.import_block_residents_with_shares(p_block_id bigint, p_rows jsonb)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  item jsonb;
+  v_number text;
+  v_code text;
+  v_unit_id bigint;
+  v_matches bigint[];
+  v_share_text text;
+  v_share numeric(15,12);
+  v_seen_shares jsonb := '{}'::jsonb;
+  v_seen_references jsonb := '{}'::jsonb;
+  v_seen_codes jsonb := '{}'::jsonb;
+  v_ref text;
+  v_count integer := 0;
+begin
+  if not exists (
+    select 1 from public.portal_members
+    where email = lower(auth.jwt()->>'email')
+      and role in ('owner','admin','manager')
+  ) then
+    raise exception 'Manager access required' using errcode = '42501';
+  end if;
+  if jsonb_typeof(p_rows) is distinct from 'array' then
+    raise exception 'Provide 1 to 500 rows';
+  end if;
+  if jsonb_array_length(p_rows) not between 1 and 500 then
+    raise exception 'Provide 1 to 500 rows';
+  end if;
+  -- Defence in depth: deployed table policies can equate blank portfolio labels.
+  -- Require a real assignment here without widening or changing those policies.
+  -- Exact matching intentionally preserves the existing portfolio identity rule.
+  if not exists (
+    select 1 from public.blocks b join public.portal_members m
+      on m.email = lower(auth.jwt()->>'email')
+    where b.id = p_block_id and (
+      m.role in ('owner','admin') or (
+        m.role = 'manager'
+        and m.portfolio_manager ~ '[^[:space:]]'
+        and b.manager ~ '[^[:space:]]'
+        and m.portfolio_manager = b.manager
+      )
+    )
+  ) then
+    raise exception 'Assigned portfolio access required' using errcode = '42501';
+  end if;
+  -- Serialize this importer per block, including first-time unit creation.
+  -- Legacy imports/direct unit edits do not take this lock: see rollout tests.
+  perform pg_advisory_xact_lock(hashtextextended('unit-share-import:' || p_block_id::text, 0));
+
+  for item in select value from jsonb_array_elements(p_rows) loop
+    if jsonb_typeof(item) is distinct from 'object' then
+      raise exception 'Each import row must be an object';
+    end if;
+    v_number := nullif(trim(coalesce(item->>'unit_number','')), '');
+    v_code := nullif(trim(coalesce(item->>'unit_code','')), '');
+    if coalesce(length(v_number),0) > 80 or coalesce(length(v_code),0) > 80
+       or (v_number is null and v_code is null) then
+      raise exception 'Provide a unit number or unit code of at most 80 characters';
+    end if;
+
+    -- Source unit_code is only a matching hint, never public.units.id and never
+    -- a new persisted identifier. Both tokens must resolve to at most ONE unit
+    -- in this block. An exact spelling does not override case ambiguity.
+    select array_agg(u.id order by u.id) into v_matches
+    from public.units u
+    where u.block_id = p_block_id
+      and (lower(trim(u.unit_number)) = lower(v_number)
+        or lower(trim(u.unit_number)) = lower(v_code));
+    if coalesce(cardinality(v_matches),0) > 1 then
+      raise exception 'Ambiguous or conflicting unit identifiers: % / %', v_number, v_code;
+    end if;
+    v_unit_id := v_matches[1];
+    if v_unit_id is null and v_number is null then
+      raise exception 'Unknown unit code; provide a unit number for a new unit';
+    end if;
+
+    v_share_text := nullif(trim(coalesce(item->>'service_charge_percentage','')), '');
+    v_share := null;
+    if v_share_text is not null then
+      -- Input must already be canonical percentage points, not Excel fractions
+      -- or text containing a percent sign. Reject overprecision before casting
+      -- rather than silently rounding it into a different lease percentage.
+      if v_share_text !~ '^[0-9]{1,3}(\.[0-9]{1,12})?$' then
+        raise exception 'Invalid service-charge percentage; use 0 to 100 with at most 12 decimal places';
+      end if;
+      v_share := v_share_text::numeric;
+      if v_share < 0 or v_share > 100 then
+        raise exception 'Service-charge percentage must be between 0 and 100';
+      end if;
+    end if;
+    v_ref := nullif(upper(regexp_replace(trim(coalesce(item->>'payment_reference','')), '\s', '', 'g')), '');
+    if v_ref is not null and (length(v_ref) > 80 or v_ref !~ '^[A-Z0-9][A-Z0-9/._-]*$') then
+      raise exception 'Invalid payment reference';
+    end if;
+
+    if v_unit_id is null then
+      insert into public.units(block_id, unit_number, payment_reference)
+      values(p_block_id, v_number, v_ref)
+      on conflict(block_id, unit_number) do update
+        set payment_reference = coalesce(excluded.payment_reference, units.payment_reference)
+      returning id into v_unit_id;
+    end if;
+    if v_code is not null then
+      if v_seen_codes ? lower(v_code)
+         and (v_seen_codes->>lower(v_code))::bigint <> v_unit_id then
+        raise exception 'Unit code has conflicting names';
+      end if;
+      v_seen_codes := jsonb_set(v_seen_codes, array[lower(v_code)], to_jsonb(v_unit_id));
+    end if;
+    if v_ref is not null then
+      if v_seen_references ? v_unit_id::text
+         and v_seen_references->>v_unit_id::text <> v_ref then
+        raise exception 'Conflicting payment references for the same unit';
+      end if;
+      v_seen_references := jsonb_set(v_seen_references, array[v_unit_id::text], to_jsonb(v_ref));
+    end if;
+    if v_share is not null then
+      if v_seen_shares ? v_unit_id::text
+         and (v_seen_shares->>v_unit_id::text)::numeric <> v_share then
+        raise exception 'Conflicting service-charge percentages for the same unit';
+      end if;
+      v_seen_shares := jsonb_set(v_seen_shares, array[v_unit_id::text], to_jsonb(v_share));
+    end if;
+    update public.units
+      set payment_reference = coalesce(v_ref, payment_reference),
+          service_charge_percentage = coalesce(v_share, service_charge_percentage)
+      where id = v_unit_id and block_id = p_block_id;
+    if not found then raise exception 'Unit update unavailable' using errcode = '42501'; end if;
+
+    if nullif(trim(coalesce(item->>'resident_email','')), '') is not null then
+      if length(trim(coalesce(item->>'resident_name',''))) = 0 then
+        raise exception 'Resident name required';
+      end if;
+      -- Preserve resident_archive.sql behavior: archived residents stay archived;
+      -- the returning occupant gets a new active row. Existing active rows keep
+      -- their IDs and related references. Do not delete/archive absent residents.
+      insert into public.residents(unit_id, block_id, full_name, email, phone)
+      values(v_unit_id, p_block_id, trim(item->>'resident_name'),
+        lower(trim(item->>'resident_email')), nullif(trim(coalesce(item->>'phone','')), ''))
+      on conflict(unit_id, email) where archived_at is null do update
+        set full_name = excluded.full_name, phone = excluded.phone;
+    end if;
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end;
+$function$
+;
+CREATE OR REPLACE FUNCTION public.bulk_reminder_row_current(p_row management_dispatches, p_revision bigint, p_today date)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+ select coalesce(public.bulk_reminder_statement_valid(p_row) and p_row.envelope #>> '{sourceEvidence,bulkReminder,ledgerRevision}'=p_revision::text and p_row.envelope #>> '{sourceEvidence,bulkReminder,asOf}'=p_today::text and ((p_row.kind='Overdue account reminder' and p_row.envelope #>> '{sourceEvidence,bulkReminder,mode}'='overdue') or (p_row.kind='Friendly balance notice' and p_row.envelope #>> '{sourceEvidence,bulkReminder,mode}'='outstanding')) and exists(select 1 from public.management_review_state s where s.block_id=p_row.block_id and s.area='leaseholders' and s.revision::text=p_row.envelope #>> '{sourceEvidence,contactRevision}') and public.management_dispatch_recipient_allowed(p_row.block_id,p_row.unit_id,p_row.kind,p_row.recipient) and public.bulk_reminder_account_eligible(p_row.block_id,p_row.unit_id,p_row.kind,p_today) and exists(select 1 from public.portal_members m join public.blocks b on b.id=p_row.block_id where m.email=p_row.approved_by and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))),false)
+$function$
+;
+CREATE OR REPLACE FUNCTION public.read_bulk_reminder_snapshot(p_block_id bigint)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare rev bigint;v_block jsonb;v_units jsonb;v_entries jsonb;v_protected jsonb;v_state jsonb;v_contact_rev bigint;v_today date:=(clock_timestamp() at time zone 'Europe/London')::date;
+begin
+ if current_setting('role',true)<>'service_role' and not exists(select 1 from public.portal_members m join public.blocks b on b.id=p_block_id where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) then raise exception 'Manager building access required' using errcode='42501';end if;
+ rev:=public.lock_bulk_reminder_block(p_block_id);
+ if (select count(*) from public.units where block_id=p_block_id)>100000 or (select count(*) from public.service_charge_entries where block_id=p_block_id and entry_date<=v_today)>100000 then raise exception 'Complete snapshot exceeds 100,000-row limit';end if;
+ select jsonb_build_object('id',id,'name',name,'address',address) into v_block from public.blocks where id=p_block_id;
+ select coalesce(jsonb_agg(jsonb_build_object('id',id,'blockId',block_id,'unitNumber',unit_number,'paymentReference',payment_reference) order by id),'[]') into v_units from public.units where block_id=p_block_id;
+ select coalesce(jsonb_agg(jsonb_build_object('id',id,'block_id',block_id,'unit_id',unit_id,'entry_type',entry_type,'description',description,'amount_pence',amount_pence,'entry_date',entry_date,'due_date',due_date,'reference',reference) order by id),'[]') into v_entries from public.service_charge_entries where block_id=p_block_id and entry_date<=v_today;
+ select state,revision into v_state,v_contact_rev from public.management_review_state where block_id=p_block_id and area='leaseholders';
+ -- Address-level protection permits a fresh reviewed replacement for an unsent joint
+ -- recipient without including another recipient whose submission is already protected.
+ select coalesce(jsonb_agg(jsonb_build_object('unitId',unit_id,'recipient',recipient,'status',status,'idempotencyKey',idempotency_key) order by unit_id,recipient,idempotency_key),'[]') into v_protected from public.management_dispatches where block_id=p_block_id and kind in ('Overdue account reminder','Friendly balance notice') and status in ('Pending','Sending','Sent','Uncertain') and envelope #>> '{sourceEvidence,bulkReminder,asOf}'=v_today::text;
+ return jsonb_build_object('block',v_block,'units',v_units,'entries',v_entries,'protectedRecipients',v_protected,'contactState',coalesce(v_state,'{"contacts":[],"consultations":[]}'::jsonb),'contactRevision',coalesce(v_contact_rev,0),'ledgerRevision',rev::text,'asOf',v_today,'generatedAt',to_char(clock_timestamp() at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'));
+end $function$
+;
+CREATE OR REPLACE FUNCTION private.staff_can_manage_wo_document(p_id bigint)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+ select auth.uid() is not null and exists(
+ select 1 from public.work_orders w join public.blocks b on b.id=w.block_id
+ join public.portal_members m on m.email=lower(auth.jwt()->>'email')
+ where w.id=p_id and (m.role in ('owner','admin') or (m.role='manager' and length(btrim(m.portfolio_manager))>0 and m.portfolio_manager=b.manager)));
+$function$
+;
+CREATE OR REPLACE FUNCTION private.approve_block_statement(p_block_id bigint, p_residents jsonb, p_contractors jsonb, p_revision bigint, p_confirmed boolean)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare item jsonb;bankrow public.building_cashflow_rows%rowtype;saved public.management_review_state%rowtype;
+ wo public.work_orders%rowtype;invoice jsonb;remaining bigint;settlement uuid;request jsonb;result jsonb;
+ posted integer:=0;reconciled integer:=0;matches integer;outstanding_count integer;
+begin
+ if auth.uid() is null or not exists(select 1 from public.blocks b join public.portal_members m on m.email=lower(auth.jwt()->>'email') where b.id=p_block_id and (m.role in ('owner','admin') or (m.role='manager' and nullif(m.portfolio_manager,'')=b.manager))) then raise exception 'Block access required' using errcode='42501';end if;
+ if jsonb_typeof(p_residents) is distinct from 'array' or jsonb_typeof(p_contractors) is distinct from 'array' or jsonb_array_length(p_residents)+jsonb_array_length(p_contractors) not between 1 and 1000 then raise exception 'Select 1 to 1000 transactions';end if;
+ if jsonb_array_length(p_contractors)>0 then
+  if p_confirmed is distinct from true then raise exception 'Confirm bank evidence and saved invoices';end if;
+  if not exists(select 1 from public.portal_members where email=lower(auth.jwt()->>'email') and role='owner') then raise exception 'Owner access required for contractor settlements' using errcode='42501';end if;
+  select * into saved from public.management_review_state where block_id=p_block_id and area='creditors' for update;
+  if not found or saved.revision is distinct from p_revision or jsonb_typeof(saved.state->'invoices') is distinct from 'array' then raise exception 'Creditor register changed or unavailable; reload before approval';end if;
+ end if;
+ -- Same ordering as legacy supplier settlement: creditor register, then work orders.
+ for item in select value from jsonb_array_elements(p_contractors) order by (value->>'id')::bigint loop
+  select * into bankrow from public.building_cashflow_rows where id=(item->>'id')::bigint and block_id=p_block_id for update;
+  if not found or bankrow.amount_pence>=0 then raise exception 'Outgoing statement transaction unavailable';end if;
+  if exists(select 1 from public.bank_contractor_reconciliations where cashflow_row_id=bankrow.id) then
+   if not exists(select 1 from public.bank_contractor_reconciliations l join public.supplier_settlement_allocations a on a.settlement_id=l.settlement_id where l.cashflow_row_id=bankrow.id and a.invoice_id=item->>'invoiceId') then raise exception 'Already approved with another invoice';end if;
+   continue;
+  end if;
+  if nullif(btrim(bankrow.transaction_id),'') is null or bankrow.transaction_date>(now() at time zone 'Europe/London')::date then raise exception 'Valid dated bank transaction ID required; review manually';end if;
+  select count(*) into matches from public.work_orders w where w.block_id=p_block_id and upper(w.work_order_number)=any(regexp_split_to_array(upper(bankrow.bank_reference||' '||bankrow.description),'[^A-Z0-9/._-]+'));
+  if matches<>1 then raise exception 'Exactly one work order reference in this block is required';end if;
+  select * into wo from public.work_orders w where w.block_id=p_block_id and upper(w.work_order_number)=any(regexp_split_to_array(upper(bankrow.bank_reference||' '||bankrow.description),'[^A-Z0-9/._-]+')) for update;
+  if wo.status<>'Complete' or wo.payment_status<>'Approved' or wo.actual_cost is null or wo.actual_cost<=0 then raise exception 'Complete and approve work order before reconciling';end if;
+  if (select sum((x->>'amountPence')::bigint) from jsonb_array_elements(saved.state->'invoices') x where (x->>'workOrderId')::bigint=wo.id) is distinct from round(wo.actual_cost*100)::bigint then raise exception 'Saved invoice totals must equal approved actual cost';end if;
+  if exists(select 1 from jsonb_array_elements(saved.state->'invoices') x where (x->>'workOrderId')::bigint=wo.id and ((x->>'contractorId')::bigint is distinct from wo.contractor_id or (x->>'amountPence')::bigint<=0)) then raise exception 'Saved invoice supplier or amount invalid';end if;
+  select count(*) into outstanding_count from jsonb_array_elements(saved.state->'invoices') x where (x->>'workOrderId')::bigint=wo.id and (x->>'amountPence')::bigint>(select coalesce(sum(a.amount_pence),0) from public.supplier_settlement_allocations a where a.block_id=p_block_id and a.invoice_id=x->>'id');
+  if outstanding_count<>1 then raise exception 'Multiple or no outstanding invoices require manual allocation';end if;
+  if (select count(*) from jsonb_array_elements(saved.state->'invoices') x where x->>'id'=item->>'invoiceId' and (x->>'workOrderId')::bigint=wo.id)<>1 then raise exception 'Invoice does not uniquely match work order';end if;
+  select x into invoice from jsonb_array_elements(saved.state->'invoices') x where x->>'id'=item->>'invoiceId' and (x->>'workOrderId')::bigint=wo.id;
+  select (invoice->>'amountPence')::bigint-coalesce(sum(a.amount_pence),0) into remaining from public.supplier_settlement_allocations a where a.block_id=p_block_id and a.invoice_id=invoice->>'id';
+  if -bankrow.amount_pence>remaining then raise exception 'Transaction exceeds outstanding invoice';end if;
+  settlement:=gen_random_uuid();
+  request:=jsonb_build_object('requestId',settlement,'revision',p_revision,'bankTransactionId',lower(btrim(bankrow.transaction_id)),'paymentDate',bankrow.transaction_date,'amountPence',-bankrow.amount_pence,'evidence','Reviewed block statement row '||bankrow.id||': '||bankrow.bank_reference||' '||bankrow.description,'confirmedActualPayment',true,'allocations',jsonb_build_array(jsonb_build_object('invoiceId',invoice->>'id','amountPence',-bankrow.amount_pence)));
+  result:=private.record_supplier_settlement(p_block_id,request);
+  insert into public.bank_contractor_reconciliations(cashflow_row_id,block_id,settlement_id,approved_by) values(bankrow.id,p_block_id,settlement,lower(auth.jwt()->>'email'));
+  reconciled:=reconciled+1;
+ end loop;
+ if jsonb_array_length(p_residents)>0 then posted:=public.post_bank_payments(p_block_id,p_residents);end if;
+ return jsonb_build_object('residentsPosted',posted,'contractorsReconciled',reconciled);
+end $function$
+;
+CREATE OR REPLACE FUNCTION public.save_management_review(p_block_id bigint, p_area text, p_state jsonb, p_expected_revision bigint)
+ RETURNS TABLE(state jsonb, revision bigint, updated_at timestamp with time zone)
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+begin
+ if auth.uid() is null or not exists(select 1 from public.portal_members m join public.blocks b on b.id=p_block_id where m.email=lower(auth.jwt()->>'email') and (m.role in ('owner','admin') or (m.role='manager' and m.portfolio_manager=b.manager))) then raise exception 'Manager block access required' using errcode='42501';end if;
+ if p_expected_revision is null or p_expected_revision<0 then raise exception 'Loaded revision required';end if;
+ if p_area not in ('financials','leaseholders','debtors','creditors','budget-spend') or p_state is null or jsonb_typeof(p_state)<>'object' or octet_length(p_state::text)>1500000 then raise exception 'Invalid review payload';end if;
+ if p_expected_revision=0 then
+  return query insert into public.management_review_state as target(block_id,area,state,revision,updated_by) values(p_block_id,p_area,p_state,1,lower(auth.jwt()->>'email')) on conflict(block_id,area) do nothing returning target.state,target.revision,target.updated_at;
+ else
+  return query update public.management_review_state as target set state=p_state,revision=target.revision+1 where target.block_id=p_block_id and target.area=p_area and target.revision=p_expected_revision returning target.state,target.revision,target.updated_at;
+ end if;
+ if not found then raise exception 'Review revision conflict' using errcode='40001';end if;
+end $function$
+;
+drop trigger prevent_manager_block_reassignment on public.blocks;
+drop function private.prevent_manager_block_reassignment();
+drop function public.manager_portfolio_matches(text,text,text);
+commit;

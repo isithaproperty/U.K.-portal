@@ -1,3 +1,4 @@
+import {canManageBlock} from "../_shared/manager-cover.ts";
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.58.0";
@@ -47,7 +48,7 @@ Deno.serve(async (req: Request) => {
  const {data:userData,error:userError}=await admin.auth.getUser(token),user=userData?.user;
  if(userError||!user?.email)return json({error:"Unauthorized"},401);
  const callerEmail=user.email.toLowerCase();
- const {data:member,error:memberError}=await admin.from("portal_members").select("role,portfolio_manager").eq("email",callerEmail).maybeSingle();
+ const {data:member,error:memberError}=await admin.from("portal_members").select("email,role,portfolio_manager").eq("email",callerEmail).maybeSingle();
  if(memberError||!member||!["owner","admin","manager"].includes(member.role))return json({error:"Forbidden"},403);
  let payload:any;try{const raw=await req.text();if(new TextEncoder().encode(raw).length>250000)return json({error:"Communication request is too large."},413);payload=JSON.parse(raw);}catch{return json({error:"Invalid communication request."},400);}
  if(!payload||typeof payload!=="object"||Array.isArray(payload))return json({error:"Invalid communication request."},400);
@@ -61,7 +62,7 @@ Deno.serve(async (req: Request) => {
  if(!fingerprints||typeof fingerprints!=="object"||Array.isArray(fingerprints)||blockIds.some(id=>typeof fingerprints[id]!=="string"||!/^[0-9a-f]{64}$/.test(fingerprints[id])))return json({error:"Load and review the current server recipient preview before sending."},400);
  const {data:blockRows,error:blockError}=await admin.from("blocks").select("id,name,manager").in("id",blockIds);
  if(blockError||!blockRows||blockRows.length!==blockIds.length)return json({error:"Selected blocks could not be verified."},400);
- if(member.role==="manager"&&(!member.portfolio_manager||blockRows.some((b:any)=>b.manager!==member.portfolio_manager)))return json({error:"You can only communicate with blocks in your own portfolio."},403);
+ if(blockRows.some((b:any)=>!canManageBlock(member,b.manager)))return json({error:"You can only communicate with blocks in your own portfolio."},403);
  const requestHash=await communicationFingerprint({subject,message,audience,blockIds,previewFingerprints:blockIds.map(id=>[id,fingerprints[id]])});
  const {data:prior,error:priorError}=await admin.from("communication_delivery_requests").select("*").eq("request_id",requestId).maybeSingle();
  if(priorError)return json({error:"Communication retry storage is unavailable. Install the reviewed delivery migration before sending."},503);

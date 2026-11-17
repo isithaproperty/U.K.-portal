@@ -1,0 +1,101 @@
+[
+  {
+    "cmd": "INSERT",
+    "name": "scoped staff insert work order documents",
+    "qual": null,
+    "check": "(private.staff_can_manage_wo_document(work_order_id) AND (uploaded_by = auth.uid()))",
+    "roles": [
+      "authenticated"
+    ],
+    "table": "staff_work_order_documents",
+    "schema": "public"
+  },
+  {
+    "cmd": "SELECT",
+    "name": "assigned contractor and scoped managers read dispatch",
+    "qual": "private.can_access_work_order_dispatch(id)",
+    "check": null,
+    "roles": [
+      "authenticated"
+    ],
+    "table": "work_order_dispatches",
+    "schema": "public"
+  },
+  {
+    "cmd": "SELECT",
+    "name": "assigned contractor and scoped managers read submissions",
+    "qual": "private.can_access_work_order_dispatch(dispatch_id)",
+    "check": null,
+    "roles": [
+      "authenticated"
+    ],
+    "table": "work_order_submissions",
+    "schema": "public"
+  },
+  {
+    "cmd": "INSERT",
+    "name": "assigned contractor submits invoice and job card",
+    "qual": null,
+    "check": "((uploaded_by = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND (EXISTS ( SELECT 1\n   FROM work_order_dispatches d\n  WHERE ((d.id = work_order_submissions.dispatch_id) AND (d.recipient_email = work_order_submissions.uploaded_by) AND private.can_access_work_order_dispatch(d.id)))) AND (EXISTS ( SELECT 1\n   FROM storage.objects o\n  WHERE ((o.bucket_id = 'work-order-documents'::text) AND (o.name = work_order_submissions.job_card_path)))) AND (EXISTS ( SELECT 1\n   FROM storage.objects o\n  WHERE ((o.bucket_id = 'work-order-documents'::text) AND (o.name = work_order_submissions.invoice_path)))))",
+    "roles": [
+      "authenticated"
+    ],
+    "table": "work_order_submissions",
+    "schema": "public"
+  },
+  {
+    "cmd": "SELECT",
+    "name": "work order document readers",
+    "qual": "((bucket_id = 'work-order-documents'::text) AND\nCASE\n    WHEN (split_part(name, '/'::text, 1) ~ '^[0-9]+$'::text) THEN private.can_access_work_order_dispatch((split_part(name, '/'::text, 1))::bigint)\n    ELSE false\nEND)",
+    "check": null,
+    "roles": [
+      "authenticated"
+    ],
+    "table": "objects",
+    "schema": "storage"
+  },
+  {
+    "cmd": "INSERT",
+    "name": "contractor uploads work order documents",
+    "qual": null,
+    "check": "((bucket_id = 'work-order-documents'::text) AND\nCASE\n    WHEN (split_part(name, '/'::text, 1) ~ '^[0-9]+$'::text) THEN (EXISTS ( SELECT 1\n       FROM work_order_dispatches d\n      WHERE ((d.id = (split_part(objects.name, '/'::text, 1))::bigint) AND (d.recipient_email = lower(( SELECT (auth.jwt() ->> 'email'::text)))) AND private.can_access_work_order_dispatch(d.id))))\n    ELSE false\nEND)",
+    "roles": [
+      "authenticated"
+    ],
+    "table": "objects",
+    "schema": "storage"
+  },
+  {
+    "cmd": "SELECT",
+    "name": "scoped managers read client invoices",
+    "qual": "private.client_invoice_can_manage(block_id)",
+    "check": null,
+    "roles": [
+      "authenticated"
+    ],
+    "table": "client_invoices",
+    "schema": "public"
+  },
+  {
+    "cmd": "SELECT",
+    "name": "scoped managers read client invoice audit",
+    "qual": "(EXISTS ( SELECT 1\n   FROM client_invoices i\n  WHERE ((i.id = client_invoice_events.invoice_id) AND private.client_invoice_can_manage(i.block_id))))",
+    "check": null,
+    "roles": [
+      "authenticated"
+    ],
+    "table": "client_invoice_events",
+    "schema": "public"
+  },
+  {
+    "cmd": "SELECT",
+    "name": "scoped staff read resident contact history",
+    "qual": "private.can_manage_resident_contact(block_id)",
+    "check": null,
+    "roles": [
+      "authenticated"
+    ],
+    "table": "resident_contact_history",
+    "schema": "public"
+  }
+]

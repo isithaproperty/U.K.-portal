@@ -1,0 +1,38 @@
+{
+  "policies": [
+    {
+      "cmd": "SELECT",
+      "name": "scoped staff and assigned contractor read staff documents",
+      "qual": "private.staff_wo_storage_access(storage_path, false)",
+      "check": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "staff_work_order_documents",
+      "schema": "public"
+    },
+    {
+      "cmd": "INSERT",
+      "name": "staff upload work order files",
+      "qual": null,
+      "check": "((bucket_id = 'staff-work-order-documents'::text) AND (owner_id = (auth.uid())::text) AND private.staff_wo_storage_access(name, true))",
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "schema": "storage"
+    },
+    {
+      "cmd": "SELECT",
+      "name": "scoped staff document readers",
+      "qual": "((bucket_id = 'staff-work-order-documents'::text) AND private.staff_wo_storage_access(name, false))",
+      "check": null,
+      "roles": [
+        "authenticated"
+      ],
+      "table": "objects",
+      "schema": "storage"
+    }
+  ],
+  "definition": "CREATE OR REPLACE FUNCTION private.staff_wo_storage_access(p_name text, p_write boolean)\n RETURNS boolean\n LANGUAGE plpgsql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\ndeclare wo bigint;\nbegin\n if auth.uid() is null or p_name !~ '^[1-9][0-9]{0,17}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(invoice|job-card)\\.(pdf|jpg|png)$' then return false; end if;\n wo:=split_part(p_name,'/',1)::bigint;\n if private.staff_can_manage_wo_document(wo) then\n  return not p_write or exists(select 1 from public.work_orders w where w.id=wo and w.contractor_id is not null and w.status<>'Cancelled');\n end if;\n if p_write then return false; end if;\n return exists(select 1 from public.staff_work_order_documents d\n join public.work_orders w on w.id=d.work_order_id join public.contractors c on c.id=d.contractor_id\n where d.storage_path=p_name and w.contractor_id=d.contractor_id and w.status<>'Cancelled'\n and d.contractor_email=lower(auth.jwt()->>'email') and lower(c.email)=d.contractor_email);\nend $function$\n"
+}

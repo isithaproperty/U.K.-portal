@@ -1,0 +1,170 @@
+[
+  {
+    "role": "authenticated",
+    "table": "staff_work_order_documents",
+    "column": "id",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "staff_work_order_documents",
+    "column": "work_order_id",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "staff_work_order_documents",
+    "column": "contractor_id",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "staff_work_order_documents",
+    "column": "document_type",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "staff_work_order_documents",
+    "column": "storage_path",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "staff_work_order_documents",
+    "column": "original_name",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "blocks",
+    "column": "name",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "blocks",
+    "column": "management_company",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "blocks",
+    "column": "type",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "blocks",
+    "column": "address",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "blocks",
+    "column": "units",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "blocks",
+    "column": "manager",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "blocks",
+    "column": "financial_year_end",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "tenant_requests",
+    "column": "status",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "tenant_requests",
+    "column": "manager_reply",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "tenant_requests",
+    "column": "updated_at",
+    "schema": "public",
+    "privilege": "UPDATE"
+  },
+  {
+    "role": "authenticated",
+    "table": "work_order_submissions",
+    "column": "id",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "work_order_submissions",
+    "column": "dispatch_id",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "work_order_submissions",
+    "column": "job_card_path",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "work_order_submissions",
+    "column": "invoice_path",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "work_order_submissions",
+    "column": "job_card_name",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "work_order_submissions",
+    "column": "invoice_name",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "authenticated",
+    "table": "work_order_submissions",
+    "column": "uploaded_by",
+    "schema": "public",
+    "privilege": "INSERT"
+  },
+  {
+    "role": "service_role",
+    "table": "management_review_state",
+    "column": "revision",
+    "schema": "public",
+    "privilege": "UPDATE"
+  }
+]

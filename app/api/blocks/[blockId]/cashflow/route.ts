@@ -8,7 +8,7 @@ async function access(raw:string){
  const blockId=Number(raw);if(!Number.isSafeInteger(blockId)||blockId<1)throw new AccessError("Invalid building.",400);
  const supabase=await createClient();const {data:{user},error:authError}=await supabase.auth.getUser();
  if(authError||!user?.email)throw new AccessError("Sign in required.",401);
- const {data:member,error:memberError}=await supabase.from("portal_members").select("role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
+ const {data:member,error:memberError}=await supabase.from("portal_members").select("email,role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
  if(memberError||!member||!["owner","admin","manager"].includes(member.role))throw new AccessError("Manager access required.",403);
  const {data:block,error:blockError}=await supabase.from("blocks").select("id,manager").eq("id",blockId).maybeSingle();
  if(blockError||!block)throw new AccessError("Building unavailable.",404);

@@ -11,7 +11,7 @@ async function access(context:Context){
  if(!Number.isSafeInteger(blockId)||blockId<1||!isReviewArea(area))return {response:reply({error:"Unknown block or review area."},400)};
  const client=await createClient();const {data:{user},error:authError}=await client.auth.getUser();
  if(authError||!user?.email)return {response:reply({error:"Sign in required."},401)};
- const {data:member,error:memberError}=await client.from("portal_members").select("role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
+ const {data:member,error:memberError}=await client.from("portal_members").select("email,role,portfolio_manager").eq("email",user.email.toLowerCase()).maybeSingle();
  if(memberError||!member||!["owner","admin","manager"].includes(member.role))return {response:reply({error:"Manager access required."},403)};
  const {data:block,error:blockError}=await client.from("blocks").select("id,manager").eq("id",blockId).maybeSingle();
  if(blockError||!block)return {response:reply({error:"Block unavailable."},404)};

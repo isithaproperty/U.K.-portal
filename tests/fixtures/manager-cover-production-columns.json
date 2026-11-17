@@ -1,0 +1,252 @@
+[
+  {
+    "table": "building_cashflow_rows",
+    "schema": "public",
+    "columns": "id bigint, block_id bigint, fingerprint text, transaction_date date, amount_pence bigint, bank_reference text, description text, transaction_id text, source_file text, status text, imported_by text, imported_at timestamp with time zone"
+  },
+  {
+    "table": "bulk_reminder_revisions",
+    "schema": "public",
+    "columns": "block_id bigint, revision bigint"
+  },
+  {
+    "table": "staff_work_order_documents",
+    "schema": "public",
+    "columns": "id uuid, work_order_id bigint, contractor_id bigint, contractor_email text, document_type text, storage_path text, original_name text, uploaded_by uuid, uploaded_by_email text, uploaded_at timestamp with time zone, source text"
+  },
+  {
+    "table": "bank_contractor_reconciliations",
+    "schema": "public",
+    "columns": "cashflow_row_id bigint, block_id bigint, settlement_id uuid, approved_by text, approved_at timestamp with time zone"
+  },
+  {
+    "table": "migrations",
+    "schema": "storage",
+    "columns": "id integer, name character varying(100), hash character varying(40), executed_at timestamp without time zone"
+  },
+  {
+    "table": "client_invoice_configuration",
+    "schema": "private",
+    "columns": "singleton boolean, writes_enabled boolean, issuing_enabled boolean"
+  },
+  {
+    "table": "client_invoices",
+    "schema": "public",
+    "columns": "id uuid, block_id bigint, block_snapshot jsonb, status text, invoice_number text, revision bigint, document jsonb, net_pence bigint, vat_pence bigint, total_pence bigint, created_by text, created_at timestamp with time zone, updated_by text, updated_at timestamp with time zone, reviewed_by text, reviewed_at timestamp with time zone, issued_by text, issued_at timestamp with time zone, voided_by text, voided_at timestamp with time zone, void_reason text"
+  },
+  {
+    "table": "client_invoice_events",
+    "schema": "public",
+    "columns": "id bigint, invoice_id uuid, revision bigint, action text, actor text, actor_id uuid, occurred_at timestamp with time zone, request_id uuid, request_payload jsonb, snapshot jsonb"
+  },
+  {
+    "table": "buckets",
+    "schema": "storage",
+    "columns": "id text, name text, owner uuid, created_at timestamp with time zone, updated_at timestamp with time zone, public boolean, avif_autodetection boolean, file_size_limit bigint, allowed_mime_types text[], owner_id text, type storage.buckettype, versioning_status text, lifecycle_configuration jsonb, lifecycle_configuration_generation uuid"
+  },
+  {
+    "table": "s3_multipart_uploads_parts",
+    "schema": "storage",
+    "columns": "id uuid, upload_id text, size bigint, part_number integer, bucket_id text, key text, etag text, owner_id text, version text, created_at timestamp with time zone"
+  },
+  {
+    "table": "s3_multipart_uploads",
+    "schema": "storage",
+    "columns": "id text, in_progress_size bigint, upload_signature text, bucket_id text, key text, version text, owner_id text, created_at timestamp with time zone, user_metadata jsonb, metadata jsonb"
+  },
+  {
+    "table": "objects",
+    "schema": "storage",
+    "columns": "id uuid, bucket_id text, name text, owner uuid, created_at timestamp with time zone, updated_at timestamp with time zone, last_accessed_at timestamp with time zone, metadata jsonb, path_tokens text[], version text, owner_id text, user_metadata jsonb, archived_at timestamp with time zone, is_delete_marker boolean, is_versioned boolean"
+  },
+  {
+    "table": "units",
+    "schema": "public",
+    "columns": "id bigint, block_id bigint, unit_number text, created_at timestamp with time zone, payment_reference text, service_charge_percentage numeric(15,12)"
+  },
+  {
+    "table": "resident_contact_history",
+    "schema": "public",
+    "columns": "id uuid, resident_id bigint, block_id bigint, version bigint, actor_id uuid, actor_email text, actor_role text, occurred_at timestamp with time zone, before_snapshot jsonb, after_snapshot jsonb"
+  },
+  {
+    "table": "portal_members",
+    "schema": "public",
+    "columns": "email text, role text, created_at timestamp with time zone, portfolio_manager text"
+  },
+  {
+    "table": "blocks",
+    "schema": "public",
+    "columns": "id bigint, source_row integer, name text, management_company text, type text, address text, units integer, manager text, financial_year_end date, myblockman_export_enabled boolean, created_at timestamp with time zone"
+  },
+  {
+    "table": "work_orders",
+    "schema": "public",
+    "columns": "id bigint, block_id bigint, title text, description text, priority text, status text, address_snapshot text, created_by text, created_at timestamp with time zone, unit_id bigint, resident_id bigint, category text, contractor text, estimated_cost numeric(12,2), actual_cost numeric(12,2), notes text, updated_at timestamp with time zone, contractor_id bigint, work_order_number text, payment_status text, payment_approved_by text, payment_approved_at timestamp with time zone, paid_at timestamp with time zone, deadline_date date, special_terms text, expense_account text, is_ongoing boolean"
+  },
+  {
+    "table": "contractors",
+    "schema": "public",
+    "columns": "id bigint, company_name text, contact_name text, email text, phone text, trade text, company_registration text, vat_number text, status text, notes text, created_by text, created_at timestamp with time zone, updated_at timestamp with time zone, expiry_pause_reason text"
+  },
+  {
+    "table": "residents",
+    "schema": "public",
+    "columns": "id bigint, unit_id bigint, block_id bigint, full_name text, email text, phone text, created_at timestamp with time zone, archived_at timestamp with time zone, contact_email text, contact_version bigint"
+  },
+  {
+    "table": "contractor_documents",
+    "schema": "public",
+    "columns": "id bigint, contractor_id bigint, document_type text, file_name text, storage_path text, mime_type text, file_size bigint, expiry_date date, notes text, uploaded_by text, uploaded_at timestamp with time zone"
+  },
+  {
+    "table": "contractor_onboarding",
+    "schema": "public",
+    "columns": "contractor_id bigint, employee_count integer, transports_waste boolean, undertakes_design boolean, undertakes_asbestos boolean, uses_subcontractors boolean, onboarding_status text, declaration_name text, declaration_accepted_at timestamp with time zone, reviewed_by text, reviewed_at timestamp with time zone, review_notes text, updated_at timestamp with time zone"
+  },
+  {
+    "table": "building_safety_records",
+    "schema": "public",
+    "columns": "id bigint, block_id bigint, category text, title text, status text, due_date date, notes text, file_name text, storage_path text, created_by text, created_at timestamp with time zone, updated_at timestamp with time zone"
+  },
+  {
+    "table": "contractor_trades",
+    "schema": "public",
+    "columns": "id bigint, contractor_id bigint, trade text, created_at timestamp with time zone"
+  },
+  {
+    "table": "contractor_members",
+    "schema": "public",
+    "columns": "id bigint, contractor_id bigint, email text, created_at timestamp with time zone, invite_token uuid, invite_expires_at timestamp with time zone"
+  },
+  {
+    "table": "contractor_email_log",
+    "schema": "public",
+    "columns": "id bigint, contractor_id bigint, event_type text, recipient text, subject text, resend_id text, status text, sent_by text, error_message text, created_at timestamp with time zone"
+  },
+  {
+    "table": "communications",
+    "schema": "public",
+    "columns": "id bigint, subject text, message text, block_ids bigint[], recipient_count integer, status text, sent_by text, resend_ids jsonb, error_message text, created_at timestamp with time zone, recipient_snapshot jsonb, delivery_request_id uuid"
+  },
+  {
+    "table": "tenant_requests",
+    "schema": "public",
+    "columns": "id bigint, block_id bigint, unit_id bigint, resident_id bigint, title text, description text, category text, priority text, status text, manager_reply text, created_by text, created_at timestamp with time zone, updated_at timestamp with time zone"
+  },
+  {
+    "table": "service_charge_entries",
+    "schema": "public",
+    "columns": "id bigint, block_id bigint, unit_id bigint, entry_type text, description text, amount_pence bigint, entry_date date, due_date date, reference text, created_by text, created_at timestamp with time zone, updated_at timestamp with time zone, request_id uuid"
+  },
+  {
+    "table": "service_charge_document_settings",
+    "schema": "public",
+    "columns": "block_id bigint, settings jsonb"
+  },
+  {
+    "table": "bank_statement_rows",
+    "schema": "public",
+    "columns": "id bigint, block_id bigint, fingerprint text, transaction_date date, amount_pence bigint, bank_reference text, description text, transaction_id text, source_file text, status text, unit_id bigint, payment_entry_id bigint, imported_by text, imported_at timestamp with time zone, posted_at timestamp with time zone"
+  },
+  {
+    "table": "resident_messages",
+    "schema": "public",
+    "columns": "id bigint, communication_id bigint, resident_id bigint, block_id bigint, recipient_email text, subject text, message text, sent_at timestamp with time zone"
+  },
+  {
+    "table": "work_order_dispatches",
+    "schema": "public",
+    "columns": "id bigint, work_order_id bigint, block_id bigint, contractor_id bigint, recipient_email text, snapshot jsonb, email_status text, created_at timestamp with time zone, sent_at timestamp with time zone"
+  },
+  {
+    "table": "work_order_submissions",
+    "schema": "public",
+    "columns": "id uuid, dispatch_id bigint, job_card_path text, invoice_path text, job_card_name text, invoice_name text, uploaded_by text, uploaded_at timestamp with time zone, notification_status text, notified_at timestamp with time zone"
+  },
+  {
+    "table": "contractor_expiry_notices",
+    "schema": "public",
+    "columns": "id bigint, contractor_id bigint, fingerprint text, payload jsonb, recipient text, status text, attempts integer, next_attempt_at timestamp with time zone, locked_until timestamp with time zone, sent_at timestamp with time zone, last_error text, created_at timestamp with time zone"
+  },
+  {
+    "table": "buckets_analytics",
+    "schema": "storage",
+    "columns": "name text, type storage.buckettype, format text, created_at timestamp with time zone, updated_at timestamp with time zone, id uuid, deleted_at timestamp with time zone"
+  },
+  {
+    "table": "buckets_vectors",
+    "schema": "storage",
+    "columns": "id text, type storage.buckettype, created_at timestamp with time zone, updated_at timestamp with time zone"
+  },
+  {
+    "table": "vector_indexes",
+    "schema": "storage",
+    "columns": "id text, name text, bucket_id text, data_type text, dimension integer, distance_metric text, metadata_configuration jsonb, created_at timestamp with time zone, updated_at timestamp with time zone"
+  },
+  {
+    "table": "bucket_lifecycle_states",
+    "schema": "storage",
+    "columns": "bucket_id text, generation uuid, next_run_at timestamp with time zone, claim_id uuid, claim_until timestamp with time zone, continuation jsonb, last_started_at timestamp with time zone, last_completed_at timestamp with time zone, last_success_at timestamp with time zone, last_result jsonb, failure_count integer, last_error jsonb, updated_at timestamp with time zone"
+  },
+  {
+    "table": "lifecycle_abandoned_artifacts",
+    "schema": "storage",
+    "columns": "bucket_id text, key text, name text, version text, attempted_at timestamp with time zone"
+  },
+  {
+    "table": "supplier_settlements",
+    "schema": "public",
+    "columns": "id uuid, block_id bigint, bank_transaction_id text, payment_date date, amount_pence bigint, evidence text, request_snapshot jsonb, recorded_by text, recorded_at timestamp with time zone"
+  },
+  {
+    "table": "supplier_settlement_allocations",
+    "schema": "public",
+    "columns": "settlement_id uuid, block_id bigint, invoice_id text, work_order_id bigint, amount_pence bigint, invoice_snapshot jsonb"
+  },
+  {
+    "table": "management_manager_alerts",
+    "schema": "public",
+    "columns": "block_id bigint, consultation_id text, review_date date, snapshot jsonb, created_at timestamp with time zone"
+  },
+  {
+    "table": "management_review_history",
+    "schema": "public",
+    "columns": "block_id bigint, area text, revision bigint, state jsonb, updated_by text, updated_at timestamp with time zone"
+  },
+  {
+    "table": "management_dispatch_events",
+    "schema": "public",
+    "columns": "id bigint, dispatch_key text, block_id bigint, at timestamp with time zone, event text, detail jsonb, provider_event_id text"
+  },
+  {
+    "table": "communication_delivery_requests",
+    "schema": "public",
+    "columns": "request_id uuid, sent_by text, payload_hash text, delivery_payload jsonb, status text, recipient_count integer, block_count integer, created_at timestamp with time zone, completed_at timestamp with time zone"
+  },
+  {
+    "table": "management_delivery_inbox",
+    "schema": "public",
+    "columns": "event_id text, provider_message_id text, event_type text, event_at timestamp with time zone, applied boolean, received_at timestamp with time zone"
+  },
+  {
+    "table": "management_dispatches",
+    "schema": "public",
+    "columns": "idempotency_key text, block_id bigint, unit_id bigint, operation_id text, kind text, recipient text, envelope jsonb, scheduled_at timestamp with time zone, status text, approved_by text, approved_at timestamp with time zone, attempt_count integer, claim_token uuid, claimed_at timestamp with time zone, sent_at timestamp with time zone, provider_message_id text, delivery_status text, delivered_at timestamp with time zone, error_message text"
+  },
+  {
+    "table": "management_review_state",
+    "schema": "public",
+    "columns": "block_id bigint, area text, state jsonb, revision bigint, updated_by text, updated_at timestamp with time zone"
+  },
+  {
+    "table": "standing_orders",
+    "schema": "public",
+    "columns": "id bigint, block_id bigint, unit_id bigint, amount_pence bigint, start_date date, cadence text, due_offset_days integer, invoice_mode text, allocation_mode text, enabled boolean, lease_confirmed boolean, lease_reference text, confirmed_by text, updated_at timestamp with time zone, revision integer"
+  },
+  {
+    "table": "standing_order_runs",
+    "schema": "public",
+    "columns": "id bigint, order_id bigint, block_id bigint, occurrence_date date, action text, ledger_entry_id bigint, bank_row_id bigint, snapshot jsonb, created_by text, created_at timestamp with time zone"
+  }
+]

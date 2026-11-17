@@ -7,9 +7,7 @@ import type {WorkOrder} from "../app/types";
 export const reviewAreas=["financials","leaseholders","debtors","creditors","budget-spend"] as const;
 export type ReviewArea=typeof reviewAreas[number];
 export function isReviewArea(value:string):value is ReviewArea{return (reviewAreas as readonly string[]).includes(value);}
-export function canManageReviewBlock(member:{role:string;portfolio_manager:string|null}|null,manager:string){
- return !!member&&(member.role==="owner"||member.role==="admin"||(member.role==="manager"&&!!member.portfolio_manager&&member.portfolio_manager===manager));
-}
+export {canManageBlock as canManageReviewBlock} from "./manager-cover.ts";
 export function validateReviewWrite(body:unknown){
  if(!body||typeof body!=="object"||Array.isArray(body))throw new Error("Provide review state and its revision.");
  const {state,revision}=body as Record<string,unknown>;
