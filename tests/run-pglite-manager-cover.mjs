@@ -79,6 +79,12 @@ try{
   assert.equal((await db.query("update blocks set name='Denied' where id=3 returning id")).rows.length,0);
   await assert.rejects(db.exec("update blocks set manager='Ramiro Naidoo' where id=2"),e=>e.code==='42501');
   await assert.rejects(db.exec("update portal_members set role='owner' where email='"+email+"'"),e=>e.code==='42501');
+  for(const [i,category] of ['DARP','Safety Case Report'].entries()){
+   await db.query('insert into building_safety_records(id,block_id,title,category,created_by) values($1,2,$2,$3,$4)',[2100+i,'Synthetic plan draft',category,email]);
+   assert.equal((await db.query('select category from building_safety_records where id=$1',[2100+i])).rows[0].category,category);
+   await assert.rejects(db.query('insert into building_safety_records(id,block_id,title,category,created_by) values($1,3,$2,$3,$4)',[2200+i,'Foreign plan',category,email]),e=>e.code==='42501');
+   await db.query('delete from building_safety_records where id=$1',[2100+i]);
+  }
   assert.equal((await db.query('delete from work_orders where id=103 returning id')).rows.length,0);
   assert.equal((await db.query('delete from building_safety_records where id=3 returning id')).rows.length,0);
   await db.query("insert into work_orders(id,block_id,title,created_by) values(1102,2,'Synthetic covered delete',$1)",[email]);assert.equal((await db.query('delete from work_orders where id=1102 returning id')).rows.length,1);
